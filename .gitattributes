@@ -1,0 +1,3 @@
+node_modules/** linguist-vendored
+.next/** linguist-vendored
+dist/** linguist-vendored
