@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Razorpay from 'razorpay';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Razorpay = require('razorpay');
 import { SupabaseService } from '../common/supabase/supabase.service';
 import { CreateOrderDto } from './dto/create-payment.dto';
 
 @Injectable()
 export class PaymentsService {
-  private razorpay: Razorpay;
+  private razorpay: any;
 
   constructor(
     private configService: ConfigService,
@@ -60,7 +61,7 @@ export class PaymentsService {
     
     const body = data.razorpay_order_id + '|' + data.razorpay_payment_id;
     const expectedSignature = crypto
-      .createHmac('sha256', this.configService.get('RAZORPAY_KEY_SECRET'))
+      .createHmac('sha256', this.configService.get('RAZORPAY_KEY_SECRET') || '')
       .update(body.toString())
       .digest('hex');
 
@@ -204,7 +205,7 @@ export class PaymentsService {
       throw new Error('Transaction not found');
     }
 
-    const refund = await this.razorpay.payments.refund(transaction.razorpay_payment_id);
+    const refund = await this.razorpay.payments.refund(transaction.razorpay_payment_id, {});
 
     await this.supabaseService
       .from('transactions')

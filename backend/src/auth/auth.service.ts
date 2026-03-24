@@ -47,12 +47,15 @@ export class AuthService {
         email,
         password_hash: passwordHash,
         role,
+        username,
       })
       .select()
       .single();
 
-    if (userError) {
-      throw new Error('Failed to create user');
+    if (userError || !user) {
+      console.error('Supabase user insert error:', JSON.stringify(userError, null, 2));
+      console.error('User data:', user);
+      throw new Error(`Failed to create user: ${userError?.message || 'Unknown error - user is null'} (code: ${userError?.code})`);
     }
 
     // Create profile

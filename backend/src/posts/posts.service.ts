@@ -331,7 +331,7 @@ export class PostsService {
   private insertAdsInFeed(posts: any[], ads: any[]) {
     if (ads.length === 0) return posts;
 
-    const result = [];
+    const result: any[] = [];
     let adIndex = 0;
 
     posts.forEach((post, index) => {

@@ -24,12 +24,12 @@ export class SupabaseService {
 
   // Auth operations
   get auth() {
-    return this.client.auth;
+    return this.client.auth as any;
   }
 
   // Storage operations
   get storage() {
-    return this.client.storage;
+    return this.client.storage as any;
   }
 
   // Database operations helper
