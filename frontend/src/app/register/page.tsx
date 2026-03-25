@@ -33,24 +33,31 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-dark-200 rounded-2xl p-8 shadow-xl">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-            <p className="text-gray-400">Join our community today</p>
-          </div>
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center justify-center gap-3">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
+              <span className="text-black font-bold text-2xl">N</span>
+            </div>
+          </Link>
+          <h1 className="mt-6 text-3xl font-bold text-white">Join Nexus</h1>
+          <p className="mt-2 text-dark-600">Create your account</p>
+        </div>
 
+        {/* Form Card */}
+        <div className="bg-dark-50 border border-dark-100 rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-dark-600 mb-2">
                 Username
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-300 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white placeholder-gray-500"
+                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
                 placeholder="johndoe"
                 required
                 minLength={3}
@@ -58,28 +65,28 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-dark-600 mb-2">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-300 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white placeholder-gray-500"
+                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-dark-600 mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-300 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white placeholder-gray-500"
+                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
                 placeholder="••••••••"
                 required
                 minLength={6}
@@ -87,13 +94,13 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-dark-600 mb-2">
                 Account Type
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-3 bg-dark-300 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white"
+                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all appearance-none cursor-pointer"
               >
                 <option value="user">Personal Account</option>
                 <option value="creator">Creator Account</option>
@@ -104,21 +111,32 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-800 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+              className="w-full py-3.5 bg-white hover:bg-gray-100 disabled:bg-dark-200 disabled:cursor-not-allowed text-black font-bold rounded-full transition-all text-base"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-400">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary-400 hover:text-primary-300">
-                Sign in
-              </Link>
-            </p>
-          </div>
+          {/* Terms */}
+          <p className="mt-4 text-xs text-dark-500 text-center">
+            By signing up, you agree to our{' '}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
+
+        {/* Sign In Link */}
+        <p className="mt-6 text-center text-dark-600">
+          Already have an account?{' '}
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

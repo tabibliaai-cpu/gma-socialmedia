@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
 import { ArticlesModule } from './articles/articles.module';
 import { AffiliatesModule } from './affiliates/affiliates.module';
+import { SetupModule } from './setup/setup.module';
 
 // Services
 import { SupabaseService } from './common/supabase/supabase.service';
@@ -54,6 +55,7 @@ import { SupabaseService } from './common/supabase/supabase.service';
     SearchModule,
     ArticlesModule,
     AffiliatesModule,
+    SetupModule,
   ],
   providers: [SupabaseService],
 })

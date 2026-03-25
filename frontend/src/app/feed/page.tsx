@@ -1,83 +1,75 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { usePostsStore } from '@/store';
-import { postsAPI } from '@/lib/api';
-import Navbar from '@/components/Navbar';
-import Feed from '@/components/Feed';
+import { useState, useEffect } from 'react';
+import MainLayout from '@/components/MainLayout';
 import CreatePost from '@/components/CreatePost';
-import Sidebar from '@/components/Sidebar';
+import Feed from '@/components/Feed';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function FeedPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
-  const { posts, setPosts, setLoading } = usePostsStore();
+  const [activeTab, setActiveTab] = useState('for-you');
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!loading && !user) {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, loading, router]);
 
-  useEffect(() => {
-    loadFeed();
-  }, []);
-
-  const loadFeed = async () => {
-    setLoading(true);
-    try {
-      const { data } = await postsAPI.getFeed();
-      setPosts(data);
-    } catch (error) {
-      console.error('Failed to load feed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-dark-300">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar */}
-          <div className="hidden lg:block">
-            <Sidebar />
-          </div>
-
-          {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-6">
-            <CreatePost onPostCreated={loadFeed} />
-            <Feed posts={posts} />
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden lg:block">
-            <div className="bg-dark-200 rounded-xl p-4 sticky top-20">
-              <h3 className="font-semibold text-white mb-4">Trending</h3>
-              <div className="space-y-3">
-                {['#tech', '#startup', '#ai', '#business', '#creator'].map((tag) => (
-                  <div key={tag} className="text-primary-400 hover:text-primary-300 cursor-pointer">
-                    {tag}
-                  </div>
-                ))}
-              </div>
-            </div>
+    <MainLayout>
+      <div className="min-h-screen">
+        {/* Header */}
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336]">
+          <h1 className="px-4 py-3 text-xl font-bold text-white">Home</h1>
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('for-you')}
+              className={`flex-1 py-4 text-center font-medium transition-colors relative ${
+                activeTab === 'for-you' ? 'text-white' : 'text-[#71767b] hover:bg-[#181836]'
+              }`}
+            >
+              For you
+              {activeTab === 'for-you' && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('following')}
+              className={`flex-1 py-4 text-center font-medium transition-colors relative ${
+                activeTab === 'following' ? 'text-white' : 'text-[#71767b] hover:bg-[#181836]'
+              }`}
+            >
+              Following
+              {activeTab === 'following' && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Create Post */}
+        <div className="border-b border-[#2f3336] p-4">
+          <CreatePost />
+        </div>
+
+        {/* Feed */}
+        <Feed />
       </div>
-    </div>
+    </MainLayout>
   );
 }

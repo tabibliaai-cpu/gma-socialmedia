@@ -8,23 +8,71 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Premium X-inspired palette
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          DEFAULT: '#1d9bf0',
+          hover: '#1a8cd8',
+          light: '#1d9bf020',
         },
+        accent: {
+          DEFAULT: '#7856ff',
+          hover: '#6d4ee6',
+        },
+        success: '#00ba7c',
+        danger: '#f4212e',
+        warning: '#ffd400',
         dark: {
-          100: '#1e1e1e',
-          200: '#181818',
-          300: '#121212',
-          400: '#0a0a0a',
+          DEFAULT: '#000000',
+          50: '#16181c',
+          100: '#202327',
+          200: '#2f3336',
+          300: '#3e4144',
+          400: '#536471',
+          500: '#6e767d',
+          600: '#8b98a5',
+          700: '#b4bdc2',
+          800: '#d9dee2',
+          900: '#f7f9f9',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['0.75rem', { lineHeight: '1rem' }],
+        'sm': ['0.875rem', { lineHeight: '1.25rem' }],
+        'base': ['1rem', { lineHeight: '1.5rem' }],
+        'lg': ['1.125rem', { lineHeight: '1.75rem' }],
+        'xl': ['1.25rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+      },
+      borderRadius: {
+        'xl': '1rem',
+        '2xl': '1.5rem',
+        'full': '9999px',
+      },
+      boxShadow: {
+        'card': '0 0 15px rgba(136, 153, 166, 0.1)',
+        'button': '0 0 0 0 rgba(0,0,0,0)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.2s ease-out',
+        'scale-in': 'scaleIn 0.15s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        scaleIn: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
     },

@@ -1,248 +1,224 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSocket } from '@/contexts/SocketContext';
-import { useChatStore } from '@/store';
+import { useState, useEffect, useRef } from 'react';
+import MainLayout from '@/components/MainLayout';
 import { chatAPI } from '@/lib/api';
-import { formatDate, encryptMessage, decryptMessage } from '@/lib/utils';
-import { Send, Image, MoreVertical, Phone, Video, User, Circle, ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import Navbar from '@/components/Navbar';
+
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+}
+
+interface Conversation {
+  id: string;
+  participant: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+    badge_type?: string;
+  };
+  last_message?: {
+    content: string;
+    created_at: string;
+  };
+}
 
 export default function ChatPage() {
   const { user } = useAuth();
-  const { isConnected, sendMessage: socketSend, sendTyping, markAsRead } = useSocket();
-  const { conversations, activeConversation, messages, onlineUsers, setConversations, setActiveConversation, setMessages, addMessage } = useChatStore();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedChat, setSelectedChat] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [encryptionKey, setEncryptionKey] = useState('');
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadConversations();
-    // Generate encryption key for this session
-    setEncryptionKey(localStorage.getItem('chat_key') || generateKey());
   }, []);
 
   useEffect(() => {
-    if (activeConversation) {
-      loadMessages(activeConversation);
+    if (selectedChat) {
+      loadMessages(selectedChat.participant.id);
     }
-  }, [activeConversation]);
+  }, [selectedChat]);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const generateKey = () => {
-    const key = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-    localStorage.setItem('chat_key', key);
-    return key;
-  };
 
   const loadConversations = async () => {
     try {
       const { data } = await chatAPI.getConversations();
-      setConversations(data);
+      setConversations(data || []);
     } catch (error) {
       console.error('Failed to load conversations:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadMessages = async (userId: string) => {
     try {
       const { data } = await chatAPI.getConversation(userId);
-      setMessages(data);
-      markAsRead(userId);
+      setMessages(data || []);
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || !activeConversation) return;
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedChat) return;
 
     try {
-      const encrypted = await encryptMessage(newMessage, encryptionKey);
-      socketSend(activeConversation, encrypted);
+      await chatAPI.sendMessage(selectedChat.participant.id, newMessage);
       setNewMessage('');
+      loadMessages(selectedChat.participant.id);
     } catch (error) {
       toast.error('Failed to send message');
     }
   };
 
-  const handleTyping = () => {
-    if (activeConversation) {
-      sendTyping(activeConversation, true);
-      setTimeout(() => sendTyping(activeConversation, false), 3000);
-    }
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
-  const activeConv = conversations.find(c => c.partnerId === activeConversation);
-
   return (
-    <div className="min-h-screen bg-dark-300">
-      <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="bg-dark-200 rounded-xl overflow-hidden h-[calc(100vh-140px)] flex">
-          {/* Conversations List */}
-          <div className={`w-full md:w-80 border-r border-gray-700 ${activeConversation ? 'hidden md:block' : ''}`}>
-            <div className="p-4 border-b border-gray-700">
-              <h2 className="text-xl font-bold text-white">Messages</h2>
+    <MainLayout>
+      <div className="min-h-screen flex">
+        {/* Conversations List */}
+        <aside className="w-[350px] border-r border-[#2f3336] flex flex-col">
+          <div className="sticky top-0 bg-black z-10 p-4 border-b border-[#2f3336]">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-bold text-white">Messages</h1>
+              <button className="p-2 hover:bg-[#181836] rounded-full transition-colors">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
             </div>
-            <div className="overflow-y-auto h-[calc(100%-60px)]">
-              {conversations.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  No conversations yet
-                </div>
-              ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.partnerId}
-                    onClick={() => setActiveConversation(conv.partnerId)}
-                    className={`w-full p-4 flex items-center space-x-3 hover:bg-dark-300 transition-colors ${
-                      activeConversation === conv.partnerId ? 'bg-dark-300' : ''
-                    }`}
-                  >
-                    <div className="relative">
-                      <div className="h-12 w-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
-                        {conv.partner?.avatar_url ? (
-                          <img src={conv.partner.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          conv.partner?.username?.charAt(0).toUpperCase() || 'U'
-                        )}
-                      </div>
-                      {onlineUsers.includes(conv.partnerId) && (
-                        <Circle className="absolute bottom-0 right-0 h-3 w-3 text-green-500 fill-current" />
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-white">{conv.partner?.username}</span>
-                        <span className="text-xs text-gray-500">{formatDate(conv.lastMessage?.created_at)}</span>
-                      </div>
-                      <p className="text-sm text-gray-400 truncate">
-                        {conv.lastMessage?.encrypted_message?.substring(0, 30)}...
-                      </p>
-                    </div>
-                    {conv.unreadCount > 0 && (
-                      <span className="bg-primary-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {conv.unreadCount}
-                      </span>
-                    )}
-                  </button>
-                ))
-              )}
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#71767b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search messages"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#202327] border-none rounded-full text-white placeholder-[#71767b] focus:bg-black focus:ring-1 focus:ring-[#1d9bf0]"
+              />
             </div>
           </div>
 
-          {/* Chat Area */}
-          <div className={`flex-1 flex flex-col ${!activeConversation ? 'hidden md:flex' : ''}`}>
-            {activeConversation ? (
-              <>
-                {/* Chat Header */}
-                <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => setActiveConversation(null)}
-                      className="md:hidden text-gray-400 hover:text-white"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                    </button>
-                    <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
-                      {activeConv?.partner?.avatar_url ? (
-                        <img src={activeConv.partner.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                      ) : (
-                        activeConv?.partner?.username?.charAt(0).toUpperCase() || 'U'
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{activeConv?.partner?.username}</p>
-                      <p className="text-xs text-gray-500">
-                        {onlineUsers.includes(activeConversation) ? 'Online' : 'Offline'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-white">
-                      <Phone className="h-5 w-5" />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-white">
-                      <Video className="h-5 w-5" />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-white">
-                      <MoreVertical className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((msg) => {
-                    const isMine = msg.sender_id === user?.id;
-                    return (
-                      <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                          isMine ? 'bg-primary-600 text-white' : 'bg-dark-300 text-white'
-                        }`}>
-                          {msg.media_url && (
-                            <img src={msg.media_url} alt="" className="rounded-lg mb-2 max-w-full" />
-                          )}
-                          <p>{msg.encrypted_message}</p>
-                          <p className={`text-xs mt-1 ${isMine ? 'text-primary-200' : 'text-gray-500'}`}>
-                            {formatDate(msg.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="p-4 border-t border-gray-700">
-                  <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-white">
-                      <Image className="h-5 w-5" />
-                    </button>
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value);
-                        handleTyping();
-                      }}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Type a message..."
-                      className="flex-1 bg-dark-300 border border-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!newMessage.trim()}
-                      className="p-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-700 text-white rounded-full"
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <User className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p>Select a conversation to start chatting</p>
-                </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#1d9bf0]"></div>
               </div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center py-16 px-4">
+                <p className="text-[#71767b] text-lg">No messages yet</p>
+                <p className="text-[#71767b] text-sm mt-2">Start a conversation with someone</p>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelectedChat(conv)}
+                  className={`w-full p-4 flex items-center gap-3 hover:bg-[#181836] transition-colors ${
+                    selectedChat?.id === conv.id ? 'bg-[#181836]' : ''
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
+                    {conv.participant.username[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="font-bold text-white truncate">{conv.participant.username}</p>
+                    <p className="text-[#71767b] text-sm truncate">{conv.last_message?.content || 'No messages'}</p>
+                  </div>
+                </button>
+              ))
             )}
           </div>
-        </div>
+        </aside>
+
+        {/* Chat Area */}
+        <main className="flex-1 flex flex-col">
+          {selectedChat ? (
+            <>
+              <div className="sticky top-0 bg-black z-10 p-4 border-b border-[#2f3336] flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                  {selectedChat.participant.username[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-bold text-white">{selectedChat.participant.username}</p>
+                  <p className="text-[#71767b] text-sm">@{selectedChat.participant.username}</p>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl ${
+                        msg.sender_id === user?.id
+                          ? 'bg-[#1d9bf0] text-white rounded-br-sm'
+                          : 'bg-[#202327] text-white rounded-bl-sm'
+                      }`}
+                    >
+                      <p>{msg.content}</p>
+                      <p className={`text-xs mt-1 ${msg.sender_id === user?.id ? 'text-white/70' : 'text-[#71767b]'}`}>
+                        {formatTime(msg.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={sendMessage} className="p-4 border-t border-[#2f3336]">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Start a new message"
+                    className="flex-1 px-4 py-3 bg-[#202327] border-none rounded-full text-white placeholder-[#71767b] focus:bg-black focus:ring-1 focus:ring-[#1d9bf0]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newMessage.trim()}
+                    className="p-3 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-sm">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#202327] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[#71767b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Select a conversation</h2>
+                <p className="text-[#71767b]">Choose from your existing conversations or start a new one</p>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
-    </div>
+    </MainLayout>
   );
 }

@@ -2,56 +2,202 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 10;
-  --background-end-rgb: 18, 18, 18;
+  --primary: #1d9bf0;
+  --primary-hover: #1a8cd8;
+  --accent: #7856ff;
+  --accent-hover: #6d4ee6;
+  --success: #00ba7c;
+  --danger: #f4212e;
+  --warning: #ffd400;
+  --dark-50: #16181c;
+  --dark-100: #202327;
+  --dark-200: #2f3336;
+  --dark-300: #3e4144;
+  --dark-400: #536471;
+  --dark-500: #6e767d;
+  --dark-600: #8b98a5;
+  --dark-700: #b4bdc2;
+  --dark-800: #d9dee2;
+  --dark-900: #f7f9f9;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+  background: #000000;
+  color: #e7e9ea;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #2f3336;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: #3e4144;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Focus styles */
+*:focus {
+  outline: none;
 }
 
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+*:focus-visible {
+  outline: 2px solid #1d9bf0;
+  outline-offset: 2px;
 }
 
+/* Selection */
+::selection {
+  background: rgba(29, 155, 240, 0.3);
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Utility classes */
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary-hover:hover {
+  background-color: var(--primary-hover);
+}
+
+.bg-dark-50 {
+  background-color: var(--dark-50);
+}
+
+.bg-dark-100 {
+  background-color: var(--dark-100);
+}
+
+.bg-dark-200 {
+  background-color: var(--dark-200);
+}
+
+.border-dark-100 {
+  border-color: var(--dark-100);
+}
+
+.border-dark-200 {
+  border-color: var(--dark-200);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-dark-500 {
+  color: var(--dark-500);
+}
+
+.text-dark-600 {
+  color: var(--dark-600);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+/* Animation utilities */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Form styling */
+input, textarea, select {
+  font-size: 16px;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  -webkit-box-shadow: 0 0 0px 1000px #16181c inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Remove number input arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Custom select arrow */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238b98a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+/* Disable body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
 }

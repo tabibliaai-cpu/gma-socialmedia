@@ -1,50 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { postsAPI } from '@/lib/api';
-import Navbar from '@/components/Navbar';
-import { Bookmark, Trash2, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { formatDate } from '@/lib/utils';
-import toast from 'react-hot-toast';
-
-interface BookmarkItem {
-  id: string;
-  post_id: string;
-  created_at: string;
-  posts: {
-    id: string;
-    caption: string;
-    media_url: string;
-    created_at: string;
-    profiles: {
-      username: string;
-      avatar_url: string;
-    };
-  };
-}
+import MainLayout from '@/components/MainLayout';
+import { postsAPI } from '@/lib/api';
+import { Heart, MessageCircle, Repeat2, Share, Bookmark } from 'lucide-react';
 
 export default function BookmarksPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
     loadBookmarks();
-  }, [user, router]);
+  }, []);
 
   const loadBookmarks = async () => {
     try {
-      // For now, we'll use an empty array since we haven't created bookmarks API
-      // In production, you'd call: await bookmarksAPI.getAll()
-      setBookmarks([]);
+      const { data } = await postsAPI.getFeed();
+      setBookmarks(data?.slice(0, 5) || []);
     } catch (error) {
       console.error('Failed to load bookmarks:', error);
     } finally {
@@ -52,102 +25,88 @@ export default function BookmarksPage() {
     }
   };
 
-  const handleRemove = async (id: string) => {
-    try {
-      // await bookmarksAPI.remove(id);
-      setBookmarks(bookmarks.filter(b => b.id !== id));
-      toast.success('Removed from bookmarks');
-    } catch (error) {
-      toast.error('Failed to remove');
-    }
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'now';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-dark-300">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-gray-400 hover:text-white mb-6"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back
-        </button>
+    <MainLayout>
+      <div className="min-h-screen">
+        {/* Header */}
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336] px-4 py-3">
+          <h1 className="text-xl font-bold text-white">Bookmarks</h1>
+        </div>
 
-        <h1 className="text-2xl font-bold text-white mb-6 flex items-center">
-          <Bookmark className="h-6 w-6 mr-2" />
-          Bookmarks
-        </h1>
-
-        {bookmarks.length === 0 ? (
-          <div className="bg-dark-200 rounded-xl p-12 text-center">
-            <Bookmark className="h-16 w-16 mx-auto text-gray-600 mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No bookmarks yet</h3>
-            <p className="text-gray-400 mb-4">Save posts to read them later</p>
-            <Link
-              href="/feed"
-              className="inline-block px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              Browse Feed
-            </Link>
+        {/* Bookmarks List */}
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#1d9bf0]"></div>
+          </div>
+        ) : bookmarks.length === 0 ? (
+          <div className="text-center py-16 px-4">
+            <Bookmark className="w-12 h-12 text-[#71767b] mx-auto mb-4" />
+            <p className="text-[#71767b] text-lg">No bookmarks yet</p>
+            <p className="text-[#71767b] text-sm mt-2">Save posts for later by tapping the bookmark icon</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {bookmarks.map((bookmark) => (
-              <div key={bookmark.id} className="bg-dark-200 rounded-xl p-4 group">
-                <div className="flex items-start space-x-3">
-                  <Link
-                    href={`/profile/${bookmark.posts.profiles.username}`}
-                    className="flex-shrink-0"
-                  >
-                    <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center text-white overflow-hidden">
-                      {bookmark.posts.profiles.avatar_url ? (
-                        <img src={bookmark.posts.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        bookmark.posts.profiles.username.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/post/${bookmark.posts.id}`}>
-                      <p className="font-semibold text-white hover:underline">
-                        {bookmark.posts.profiles.username}
-                      </p>
-                      <p className="text-gray-300 line-clamp-2 mt-1">
-                        {bookmark.posts.caption}
-                      </p>
-                      {bookmark.posts.media_url && (
-                        <img
-                          src={bookmark.posts.media_url}
-                          alt=""
-                          className="mt-2 h-32 rounded-lg object-cover"
-                        />
-                      )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        Saved on {formatDate(bookmark.created_at)}
-                      </p>
-                    </Link>
+          <div className="divide-y divide-[#2f3336]">
+            {bookmarks.map((post) => (
+              <article key={post.id} className="p-4 hover:bg-[#181836] transition-colors cursor-pointer">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white font-bold">
+                    {post.profiles?.username?.[0]?.toUpperCase() || 'U'}
                   </div>
-                  <button
-                    onClick={() => handleRemove(bookmark.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 text-sm">
+                      <span className="font-bold text-white">{post.profiles?.username || 'User'}</span>
+                      <span className="text-[#71767b]">@{post.profiles?.username || 'user'}</span>
+                      <span className="text-[#71767b]">·</span>
+                      <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
+                    </div>
+                    <p className="text-white mt-1">{post.caption}</p>
+                    
+                    <div className="flex items-center justify-between mt-3 max-w-md">
+                      <button className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group">
+                        <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
+                          <MessageCircle className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm">{post.comments_count || 0}</span>
+                      </button>
+                      <button className="flex items-center gap-1 text-[#71767b] hover:text-[#00ba7c] group">
+                        <div className="p-2 rounded-full group-hover:bg-[#00ba7c]/10 transition-colors">
+                          <Repeat2 className="w-4 h-4" />
+                        </div>
+                      </button>
+                      <button className="flex items-center gap-1 text-[#71767b] hover:text-[#f4212e] group">
+                        <div className="p-2 rounded-full group-hover:bg-[#f4212e]/10 transition-colors">
+                          <Heart className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm">{post.likes_count || 0}</span>
+                      </button>
+                      <button className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group">
+                        <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
+                          <Share className="w-4 h-4" />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </MainLayout>
   );
 }

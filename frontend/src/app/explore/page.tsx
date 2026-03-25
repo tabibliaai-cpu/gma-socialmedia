@@ -1,40 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { searchAPI } from '@/lib/api';
-import Navbar from '@/components/Navbar';
-import { Search, User, FileText, Hash, ExternalLink, Shield, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import MainLayout from '@/components/MainLayout';
+import { searchAPI } from '@/lib/api';
 
 export default function ExplorePage() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any>(null);
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchType, setSearchType] = useState<'all' | 'users' | 'posts' | 'articles'>('all');
-  const [trending, setTrending] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadTrending();
-  }, []);
+  const trending = [
+    { category: 'Technology · Trending', tag: '#AIRevolution', posts: '45.2K' },
+    { category: 'Business · Trending', tag: '#StartupLife', posts: '32.1K' },
+    { category: 'Trending', tag: '#Web3', posts: '28.5K' },
+    { category: 'Technology · Trending', tag: '#OpenSource', posts: '21.3K' },
+    { category: 'Design · Trending', tag: '#UIDesign', posts: '18.7K' },
+  ];
 
-  const loadTrending = async () => {
-    try {
-      const { data } = await searchAPI.getTrending();
-      setTrending(data);
-    } catch (error) {
-      console.error('Failed to load trending:', error);
-    }
-  };
+  const suggestions = [
+    { id: 1, username: 'techfounder', name: 'Tech Founder', verified: true, bio: 'Building the future' },
+    { id: 2, username: 'aibuilder', name: 'AI Builder', verified: true, bio: 'AI enthusiast & developer' },
+    { id: 3, username: 'designpro', name: 'Design Pro', verified: false, bio: 'Creating beautiful experiences' },
+  ];
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-
+    if (!searchQuery.trim()) return;
+    
     setLoading(true);
     try {
-      const { data } = await searchAPI.search(query, searchType);
-      setResults(data);
+      const { data } = await searchAPI.search(searchQuery);
+      setSearchResults(data?.users || []);
     } catch (error) {
       console.error('Search failed:', error);
     } finally {
@@ -43,207 +42,104 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-300">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search users, posts, articles..."
-              className="w-full pl-12 pr-4 py-4 bg-dark-200 border border-gray-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-white placeholder-gray-500 text-lg"
-            />
-          </div>
+    <MainLayout>
+      <div className="min-h-screen">
+        {/* Search Header */}
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 p-4 border-b border-[#2f3336]">
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71767b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search"
+                className="w-full pl-12 pr-4 py-3 bg-[#202327] border-none rounded-full text-white placeholder-[#71767b] focus:bg-black focus:ring-1 focus:ring-[#1d9bf0] transition-all"
+              />
+            </div>
+          </form>
+        </div>
 
-          {/* Search Type Tabs */}
-          <div className="flex space-x-2 mt-4">
-            {['all', 'users', 'posts', 'articles'].map((type) => (
+        {/* Tabs */}
+        <div className="border-b border-[#2f3336]">
+          <nav className="flex">
+            {['For you', 'Trending', 'News', 'Sports', 'Entertainment'].map((tab, i) => (
               <button
-                key={type}
-                type="button"
-                onClick={() => setSearchType(type as any)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  searchType === type
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-dark-200 text-gray-400 hover:text-white'
+                key={tab}
+                className={`flex-1 py-4 text-center font-medium transition-colors relative ${
+                  i === 0 ? 'text-white' : 'text-[#71767b] hover:bg-[#181836] hover:text-white'
                 }`}
               >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {tab}
+                {i === 0 && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+                )}
               </button>
             ))}
-          </div>
-        </form>
+          </nav>
+        </div>
 
-        {/* Trending */}
-        {!results && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <Hash className="h-5 w-5 mr-2" />
-              Trending
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {trending.map((tag, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setQuery(tag.hashtag);
-                    handleSearch({ preventDefault: () => {} } as any);
-                  }}
-                  className="bg-dark-200 rounded-xl p-4 hover:bg-dark-100 transition-colors text-left"
-                >
-                  <p className="font-semibold text-white">{tag.hashtag}</p>
-                  <p className="text-sm text-gray-400">{tag.count} posts</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Results */}
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
-          </div>
-        ) : results && (
-          <div className="space-y-8">
-            {/* Users */}
-            {results.internal?.users?.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Users
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {results.internal.users.map((user: any) => (
-                    <Link
-                      key={user.user_id}
-                      href={`/profile/${user.username}`}
-                      className="bg-dark-200 rounded-xl p-4 flex items-center space-x-3 hover:bg-dark-100 transition-colors"
-                    >
-                      <div className="h-12 w-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          user.username.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">{user.username}</p>
-                        <p className="text-sm text-gray-400 line-clamp-1">{user.bio}</p>
-                      </div>
-                    </Link>
-                  ))}
+        {/* Search Results or Trending */}
+        {searchResults.length > 0 ? (
+          <div className="divide-y divide-[#2f3336]">
+            {searchResults.map((result: any) => (
+              <div key={result.id} className="p-4 hover:bg-[#181836] cursor-pointer transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                    {result.username?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">{result.username}</p>
+                    <p className="text-[#71767b] text-sm">@{result.username}</p>
+                  </div>
                 </div>
-              </section>
-            )}
-
-            {/* Posts */}
-            {results.internal?.posts?.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Posts
-                </h3>
-                <div className="space-y-4">
-                  {results.internal.posts.map((post: any) => (
-                    <Link
-                      key={post.id}
-                      href={`/post/${post.id}`}
-                      className="block bg-dark-200 rounded-xl p-4 hover:bg-dark-100 transition-colors"
-                    >
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="text-sm text-gray-400">{post.profiles?.username}</span>
-                        <span className="text-xs text-gray-500">{formatDate(post.created_at)}</span>
-                      </div>
-                      <p className="text-white line-clamp-2">{post.caption}</p>
-                      {post.factCheck && (
-                        <div className={`flex items-center space-x-2 mt-2 text-xs ${
-                          post.factCheck.status === 'verified' ? 'text-green-400' :
-                          post.factCheck.status === 'misleading' ? 'text-red-400' :
-                          'text-yellow-400'
-                        }`}>
-                          {post.factCheck.status === 'verified' ? (
-                            <Shield className="h-4 w-4" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4" />
-                          )}
-                          <span>{post.factCheck.status}</span>
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Articles */}
-            {results.internal?.articles?.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-4">Articles</h3>
-                <div className="space-y-4">
-                  {results.internal.articles.map((article: any) => (
-                    <Link
-                      key={article.id}
-                      href={`/article/${article.id}`}
-                      className="block bg-dark-200 rounded-xl p-4 hover:bg-dark-100 transition-colors"
-                    >
-                      <h4 className="font-semibold text-white">{article.title}</h4>
-                      <p className="text-sm text-gray-400 mt-1 line-clamp-2">
-                        {article.content?.substring(0, 150)}...
-                      </p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        {article.is_paid && (
-                          <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">
-                            ₹{article.price}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* External Results */}
-            {results.external?.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <ExternalLink className="h-5 w-5 mr-2" />
-                  Web Results
-                </h3>
-                <div className="space-y-3">
-                  {results.external.map((item: any, i: number) => (
-                    <a
-                      key={i}
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block bg-dark-200 rounded-xl p-4 hover:bg-dark-100 transition-colors"
-                    >
-                      <p className="text-sm text-primary-400 mb-1">{item.link}</p>
-                      <h4 className="font-semibold text-white">{item.title}</h4>
-                      <p className="text-sm text-gray-400 mt-1">{item.snippet}</p>
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* No Results */}
-            {!results.internal?.users?.length && 
-             !results.internal?.posts?.length && 
-             !results.internal?.articles?.length && (
-              <div className="text-center py-12 text-gray-500">
-                No results found for "{query}"
               </div>
-            )}
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-[#2f3336]">
+            {trending.map((item, i) => (
+              <div key={i} className="p-4 hover:bg-[#181836] cursor-pointer transition-colors">
+                <p className="text-xs text-[#71767b]">{item.category}</p>
+                <p className="font-bold text-white mt-0.5">{item.tag}</p>
+                <p className="text-xs text-[#71767b] mt-0.5">{item.posts} posts</p>
+              </div>
+            ))}
           </div>
         )}
+
+        {/* Who to Follow */}
+        <div className="p-4">
+          <h2 className="text-xl font-bold text-white mb-4">Who to follow</h2>
+          <div className="divide-y divide-[#2f3336]">
+            {suggestions.map((suggestion) => (
+              <div key={suggestion.id} className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                    {suggestion.username[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-bold text-white flex items-center gap-1">
+                      {suggestion.name}
+                      {suggestion.verified && (
+                        <svg className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" viewBox="0 0 24 24">
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                      )}
+                    </p>
+                    <p className="text-[#71767b] text-sm">@{suggestion.username}</p>
+                  </div>
+                </div>
+                <button className="px-4 py-1.5 bg-white hover:bg-gray-200 text-black font-bold rounded-full text-sm transition-colors">
+                  Follow
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

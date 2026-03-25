@@ -1,61 +1,82 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { Home, Compass, Bell, MessageCircle, Bookmark, User, Settings, HelpCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Home, Search, Bell, Mail, Bookmark, User, Settings, HelpCircle, MoreHorizontal } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export default function Sidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
 
   const menuItems = [
     { href: '/feed', icon: Home, label: 'Home' },
-    { href: '/explore', icon: Compass, label: 'Explore' },
+    { href: '/explore', icon: Search, label: 'Explore' },
     { href: '/notifications', icon: Bell, label: 'Notifications' },
-    { href: '/chat', icon: MessageCircle, label: 'Messages' },
+    { href: '/chat', icon: Mail, label: 'Messages' },
     { href: '/bookmarks', icon: Bookmark, label: 'Bookmarks' },
-    { href: `/profile/${user?.profile?.username}`, icon: User, label: 'Profile' },
-    { href: '/settings', icon: Settings, label: 'Settings' },
-    { href: '/help', icon: HelpCircle, label: 'Help' },
+    { href: `/profile/${user?.username || 'me'}`, icon: User, label: 'Profile' },
   ];
 
-  return (
-    <div className="sticky top-20">
-      {/* User Card */}
-      <div className="bg-dark-200 rounded-xl p-4 mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="h-12 w-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
-            {user?.profile?.username?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div>
-            <p className="font-semibold text-white">{user?.profile?.username}</p>
-            <p className="text-sm text-gray-400">@{user?.profile?.username}</p>
-          </div>
-        </div>
-        <div className="flex justify-around mt-4 pt-4 border-t border-gray-700">
-          <div className="text-center">
-            <p className="font-bold text-white">{user?.profile?.followers_count || 0}</p>
-            <p className="text-xs text-gray-400">Followers</p>
-          </div>
-          <div className="text-center">
-            <p className="font-bold text-white">{user?.profile?.following_count || 0}</p>
-            <p className="text-xs text-gray-400">Following</p>
-          </div>
-        </div>
-      </div>
+  const isActive = (href: string) => {
+    if (href === '/feed') return pathname === '/feed' || pathname === '/';
+    return pathname === href || pathname.startsWith(href);
+  };
 
-      {/* Menu */}
-      <nav className="bg-dark-200 rounded-xl p-2">
+  return (
+    <div className="sticky top-20 space-y-4">
+      {/* Navigation */}
+      <nav className="space-y-1">
         {menuItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-dark-300 hover:text-white rounded-lg transition-colors"
+            className={`flex items-center gap-4 px-3 py-3 rounded-full text-xl font-bold transition-all ${
+              isActive(item.href)
+                ? 'text-white'
+                : 'text-dark-600 hover:bg-dark-100 hover:text-white'
+            }`}
           >
-            <item.icon className="h-5 w-5" />
-            <span>{item.label}</span>
+            <item.icon className={`w-6 h-6 ${isActive(item.href) ? 'stroke-[2.5]' : ''}`} />
+            <span className="hidden xl:block">{item.label}</span>
           </Link>
         ))}
+
+        {/* More */}
+        <button
+          className="flex items-center gap-4 px-3 py-3 rounded-full text-xl font-bold text-dark-600 hover:bg-dark-100 hover:text-white w-full"
+        >
+          <MoreHorizontal className="w-6 h-6" />
+          <span className="hidden xl:block">More</span>
+        </button>
       </nav>
+
+      {/* Post Button */}
+      <Link
+        href="/create/post"
+        className="flex items-center justify-center w-full xl:w-full py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-colors text-base"
+      >
+        <span className="xl:hidden">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </span>
+        <span className="hidden xl:block">Post</span>
+      </Link>
+
+      {/* User Card */}
+      {user && (
+        <div className="flex items-center gap-3 p-3 rounded-full hover:bg-dark-100 cursor-pointer transition-colors mt-4">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0">
+            {user.username?.[0]?.toUpperCase() || 'U'}
+          </div>
+          <div className="hidden xl:block flex-1 min-w-0">
+            <p className="font-bold text-white text-sm truncate">{user.username}</p>
+            <p className="text-dark-500 text-sm truncate">@{user.username}</p>
+          </div>
+          <MoreHorizontal className="w-5 h-5 text-dark-500 hidden xl:block" />
+        </div>
+      )}
     </div>
   );
 }

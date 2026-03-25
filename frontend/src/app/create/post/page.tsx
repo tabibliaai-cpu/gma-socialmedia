@@ -2,23 +2,26 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { postsAPI } from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import { Image, Video, X, Globe, Lock, Users } from 'lucide-react';
+import { postsAPI } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { Image, Video, Smile, Calendar, MapPin, X, Globe, Users, Lock } from 'lucide-react';
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [caption, setCaption] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const [visibility, setVisibility] = useState('public');
+  const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public');
   const [loading, setLoading] = useState(false);
+  const [showMediaInput, setShowMediaInput] = useState(false);
+  const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!caption.trim() && !mediaUrl) {
-      toast.error('Please add content to your post');
+      toast.error('Please add some content');
       return;
     }
 
@@ -27,9 +30,10 @@ export default function CreatePostPage() {
       await postsAPI.create({
         caption,
         media_url: mediaUrl || undefined,
-        media_type: mediaUrl ? mediaType : undefined,
+        media_type: mediaType,
+        visibility,
       });
-      toast.success('Post created successfully!');
+      toast.success('Post created!');
       router.push('/feed');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create post');
@@ -38,121 +42,169 @@ export default function CreatePostPage() {
     }
   };
 
+  const charCount = caption.length;
+  const charLimit = 280;
+
+  const visibilityOptions = [
+    { value: 'public', label: 'Everyone', icon: Globe, desc: 'Anyone can see' },
+    { value: 'followers', label: 'Followers', icon: Users, desc: 'Only your followers' },
+    { value: 'private', label: 'Private', icon: Lock, desc: 'Only mentioned users' },
+  ];
+
   return (
-    <div className="min-h-screen bg-dark-300">
+    <div className="min-h-screen bg-black">
       <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="bg-dark-200 rounded-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            <h1 className="text-xl font-bold text-white">Create Post</h1>
-            <button
-              onClick={() => router.back()}
-              className="text-gray-400 hover:text-white"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
+      
+      <div className="pt-16 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between p-4 border-b border-dark-100">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-dark-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || (!caption.trim() && !mediaUrl) || charCount > charLimit}
+            className="px-5 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-colors"
+          >
+            {loading ? 'Posting...' : 'Post'}
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="p-4">
+        <div className="p-4">
+          <div className="flex gap-3">
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white font-bold">
+              {user?.username?.[0]?.toUpperCase() || 'U'}
+            </div>
+
             {/* Content */}
-            <textarea
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="What's on your mind?"
-              className="w-full bg-transparent text-white text-lg placeholder-gray-500 focus:outline-none resize-none"
-              rows={6}
-            />
+            <div className="flex-1">
+              {/* Visibility */}
+              <div className="relative mb-3">
+                <button
+                  onClick={() => setShowVisibilityMenu(!showVisibilityMenu)}
+                  className="flex items-center gap-1 text-primary text-sm font-medium hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  <Globe className="w-4 h-4" />
+                  Everyone
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-            {/* Media Preview */}
-            {mediaUrl && (
-              <div className="relative mt-4 rounded-xl overflow-hidden">
-                {mediaType === 'video' ? (
-                  <video src={mediaUrl} controls className="w-full max-h-96" />
-                ) : (
-                  <img src={mediaUrl} alt="" className="w-full max-h-96 object-cover" />
+                {showVisibilityMenu && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-dark-50 border border-dark-100 rounded-2xl shadow-lg overflow-hidden z-10">
+                    {visibilityOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setVisibility(option.value as any);
+                          setShowVisibilityMenu(false);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 hover:bg-dark-100 transition-colors ${
+                          visibility === option.value ? 'bg-dark-100' : ''
+                        }`}
+                      >
+                        <option.icon className="w-5 h-5 text-white" />
+                        <div className="text-left">
+                          <p className="text-white font-medium">{option.label}</p>
+                          <p className="text-dark-500 text-xs">{option.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setMediaUrl('')}
-                  className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
-                >
-                  <X className="h-5 w-5" />
-                </button>
               </div>
-            )}
 
-            {/* Media Input */}
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setMediaType('image')}
-                  className={`p-2 rounded-lg ${mediaType === 'image' ? 'bg-primary-600 text-white' : 'bg-dark-300 text-gray-400'}`}
-                >
-                  <Image className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMediaType('video')}
-                  className={`p-2 rounded-lg ${mediaType === 'video' ? 'bg-primary-600 text-white' : 'bg-dark-300 text-gray-400'}`}
-                >
-                  <Video className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <input
-                type="url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder={`Paste ${mediaType} URL...`}
-                className="w-full px-4 py-3 bg-dark-300 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              {/* Text Area */}
+              <textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="What's happening?"
+                className="w-full bg-transparent border-none text-xl text-white placeholder-dark-500 focus:outline-none resize-none min-h-[120px]"
+                maxLength={charLimit + 50}
               />
-            </div>
 
-            {/* Visibility */}
-            <div className="mt-4 p-3 bg-dark-300 rounded-lg">
-              <p className="text-sm text-gray-400 mb-2">Who can see this post?</p>
-              <div className="flex space-x-2">
-                {[
-                  { value: 'public', icon: Globe, label: 'Public' },
-                  { value: 'followers', icon: Users, label: 'Followers' },
-                  { value: 'private', icon: Lock, label: 'Only me' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setVisibility(option.value)}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-sm ${
-                      visibility === option.value
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-dark-200 text-gray-400 hover:text-white'
-                    }`}
+              {/* Media Input */}
+              {showMediaInput && (
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={mediaUrl}
+                    onChange={(e) => setMediaUrl(e.target.value)}
+                    placeholder="Paste image or video URL"
+                    className="flex-1 px-4 py-2.5 bg-dark-100 border border-dark-200 rounded-xl text-white text-sm placeholder-dark-500 focus:outline-none focus:border-primary transition-colors"
+                  />
+                  <select
+                    value={mediaType}
+                    onChange={(e) => setMediaType(e.target.value as any)}
+                    className="px-3 py-2.5 bg-dark-100 border border-dark-200 rounded-xl text-white text-sm focus:outline-none"
                   >
-                    <option.icon className="h-4 w-4" />
-                    <span>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+              )}
 
-            {/* Character Count */}
-            <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
-              <span>{caption.length} / 2000</span>
-              {caption.length > 2000 && (
-                <span className="text-red-400">Caption too long</span>
+              {/* Preview */}
+              {mediaUrl && (
+                <div className="mt-3 relative rounded-2xl overflow-hidden border border-dark-100">
+                  {mediaType === 'video' ? (
+                    <video src={mediaUrl} controls className="w-full max-h-80 object-cover" />
+                  ) : (
+                    <img src={mediaUrl} alt="" className="w-full max-h-80 object-cover" />
+                  )}
+                  <button
+                    onClick={() => {
+                      setMediaUrl('');
+                      setShowMediaInput(false);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               )}
             </div>
+          </div>
+        </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading || caption.length > 2000}
-              className="w-full mt-4 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-            >
-              {loading ? 'Posting...' : 'Post'}
-            </button>
-          </form>
+        {/* Bottom Actions */}
+        <div className="border-t border-dark-100 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowMediaInput(true)}
+                className="p-2.5 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              >
+                <Image className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => {
+                  setShowMediaInput(true);
+                  setMediaType('video');
+                }}
+                className="p-2.5 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              >
+                <Video className="w-5 h-5" />
+              </button>
+              <button className="p-2.5 text-primary hover:bg-primary/10 rounded-full transition-colors">
+                <Smile className="w-5 h-5" />
+              </button>
+              <button className="p-2.5 text-primary hover:bg-primary/10 rounded-full transition-colors">
+                <Calendar className="w-5 h-5" />
+              </button>
+              <button className="p-2.5 text-primary hover:bg-primary/10 rounded-full transition-colors">
+                <MapPin className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className={`text-sm font-medium ${charCount > charLimit ? 'text-danger' : charCount > charLimit - 20 ? 'text-warning' : 'text-dark-500'}`}>
+              {charCount > charLimit - 20 && `${charLimit - charCount}`}
+            </div>
+          </div>
         </div>
       </div>
     </div>

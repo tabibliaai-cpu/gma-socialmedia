@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
 import { Providers } from './providers';
-import { Toaster } from 'react-hot-toast';
-
-const inter = Inter({ subsets: ['latin'] });
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SocialApp - Connect & Grow',
-  description: 'A modern social media platform with AI-powered CRM',
+  title: 'Nexus - Social Platform',
+  description: 'A modern social media platform with AI-powered features',
 };
 
 export default function RootLayout({
@@ -18,20 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#1e1e1e',
-                color: '#fff',
-                border: '1px solid #333',
-              },
-            }}
-          />
-        </Providers>
+      <body className="antialiased bg-black text-white min-h-screen">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
