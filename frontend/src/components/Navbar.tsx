@@ -77,7 +77,7 @@ export default function Navbar() {
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
               <span className="text-black font-bold text-sm">N</span>
             </div>
-            <span className="text-xl font-bold text-white hidden sm:block">Nexus</span>
+            <span className="text-xl font-bold text-white hidden sm:block">GPM</span>
           </Link>
 
           {/* Desktop Navigation */}

@@ -36,8 +36,8 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center justify-center gap-3">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
-              <span className="text-black font-bold text-2xl">N</span>
+            <div className="w-16 h-16 bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] rounded-2xl flex items-center justify-center">
+              <span className="text-white font-bold text-xl">GPM</span>
             </div>
           </Link>
           <h1 className="mt-6 text-3xl font-bold text-white">Welcome back</h1>

@@ -3,7 +3,7 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Nexus - Social Platform',
+  title: 'GPM - Social Platform',
   description: 'A modern social media platform with AI-powered features',
 };
 
