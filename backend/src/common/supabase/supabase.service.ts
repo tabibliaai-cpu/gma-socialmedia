@@ -22,11 +22,13 @@ export class SupabaseService {
     return this.client;
   }
 
-  auth() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  auth(): any {
     return this.client.auth;
   }
 
-  storage() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  storage(): any {
     return this.client.storage;
   }
 
