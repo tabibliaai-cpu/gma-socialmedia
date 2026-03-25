@@ -1,8 +1,9 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UseGuards, Request } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
@@ -33,5 +34,10 @@ export class AuthController {
   @Post('refresh')
   async refreshToken(@Body('refresh_token') refreshToken: string) {
     return this.authService.refreshToken(refreshToken);
+  }
+
+  @Get('test')
+  async test() {
+    return { status: 'ok', message: 'Auth endpoint is working' };
   }
 }

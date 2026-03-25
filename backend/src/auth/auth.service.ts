@@ -54,8 +54,7 @@ export class AuthService {
 
     if (userError || !user) {
       console.error('Supabase user insert error:', JSON.stringify(userError, null, 2));
-      console.error('User data:', user);
-      throw new Error(`Failed to create user: ${userError?.message || 'Unknown error - user is null'} (code: ${userError?.code})`);
+      throw new Error(`Failed to create user: ${userError?.message || 'Unknown error'}`);
     }
 
     // Create profile
@@ -88,6 +87,8 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
+    console.log('Login attempt for:', email);
+
     // Find user
     const { data: user, error } = await this.supabaseService
       .from('users')
@@ -95,13 +96,21 @@ export class AuthService {
       .eq('email', email)
       .single();
 
+    console.log('User query result:', { userFound: !!user, error: error?.message });
+
     if (error || !user) {
+      console.log('User not found');
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    console.log('Stored hash:', user.password_hash?.substring(0, 20) + '...');
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    console.log('Password valid:', isValidPassword);
+
     if (!isValidPassword) {
+      console.log('Invalid password');
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -152,7 +161,6 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    // In a real app, you might want to invalidate the token
     return { message: 'Logged out successfully' };
   }
 
