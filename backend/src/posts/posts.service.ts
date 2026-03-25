@@ -8,12 +8,13 @@ export class PostsService {
 
   async createPost(userId: string, createPostDto: CreatePostDto) {
     const insertData: any = {
-      content: createPostDto.caption, // Map caption to content
+      user_id: userId,
+      content: createPostDto.caption,
       likes_count: 0,
       comments_count: 0,
       shares_count: 0,
     };
-    
+
     if (createPostDto.media_url) insertData.media_url = createPostDto.media_url;
     if (createPostDto.media_type) insertData.media_type = createPostDto.media_type;
     if (createPostDto.caption) insertData.caption = createPostDto.caption;
@@ -29,7 +30,6 @@ export class PostsService {
       throw new Error(`Failed to create post: ${error.message}`);
     }
 
-    // Get profile separately
     const { data: profile } = await this.supabaseService
       .from('profiles')
       .select('username, avatar_url, badge_type')
@@ -42,24 +42,20 @@ export class PostsService {
   async getFeed(userId: string, page: number = 1, limit: number = 20) {
     const offset = (page - 1) * limit;
 
-    // Try to get posts from followed users + own posts
-    let followingIds: string[] = [userId]; // Always include own posts
-    
+    let followingIds: string[] = [userId];
     try {
       const { data: following } = await this.supabaseService
         .from('followers')
         .select('following_id')
         .eq('follower_id', userId);
-      
+
       if (following && following.length > 0) {
         followingIds = [...followingIds, ...following.map(f => f.following_id)];
       }
     } catch (e) {
-      // Followers table might not exist, just show all posts
       console.log('Followers query failed, showing all posts');
     }
 
-    // Get posts
     const { data: posts, error } = await this.supabaseService
       .from('posts')
       .select('*')
@@ -68,14 +64,10 @@ export class PostsService {
 
     if (error) {
       console.error('Get feed error:', error);
-      // If posts table doesn't exist, return empty array
-      if (error.code === '42P01') {
-        return [];
-      }
+      if (error.code === '42P01') return [];
       throw new Error(`Failed to get feed: ${error.message}`);
     }
 
-    // Get profiles for each post
     const postsWithProfiles = await Promise.all(
       (posts || []).map(async (post) => {
         const { data: profile } = await this.supabaseService
@@ -83,7 +75,7 @@ export class PostsService {
           .select('username, avatar_url, badge_type')
           .eq('user_id', post.user_id)
           .single();
-        
+
         return {
           ...post,
           profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
@@ -101,20 +93,33 @@ export class PostsService {
 
     const { data: posts, error } = await this.supabaseService
       .from('posts')
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type),
-        likes(count),
-        comments(count)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
-      throw new Error('Failed to get explore feed');
+      console.error('Get explore feed error:', error);
+      return [];
     }
 
-    return posts;
+    const postsWithProfiles = await Promise.all(
+      (posts || []).map(async (post) => {
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('username, avatar_url, badge_type')
+          .eq('user_id', post.user_id)
+          .single();
+
+        return {
+          ...post,
+          profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
+          likes_count: post.likes_count || 0,
+          comments_count: post.comments_count || 0,
+        };
+      })
+    );
+
+    return postsWithProfiles;
   }
 
   async getUserPosts(userId: string, page: number = 1, limit: number = 20) {
@@ -122,40 +127,54 @@ export class PostsService {
 
     const { data: posts, error } = await this.supabaseService
       .from('posts')
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type),
-        likes(count),
-        comments(count)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
-      throw new Error('Failed to get user posts');
+      return [];
     }
 
-    return posts;
+    const postsWithProfiles = await Promise.all(
+      (posts || []).map(async (post) => {
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('username, avatar_url, badge_type')
+          .eq('user_id', post.user_id)
+          .single();
+
+        return {
+          ...post,
+          profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
+          likes_count: post.likes_count || 0,
+          comments_count: post.comments_count || 0,
+        };
+      })
+    );
+
+    return postsWithProfiles;
   }
 
   async getPostById(postId: string, userId?: string) {
     const { data: post, error } = await this.supabaseService
       .from('posts')
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type),
-        likes(count),
-        comments(count)
-      `)
+      .select('*')
       .eq('id', postId)
       .single();
 
-    if (error) {
+    if (error || !post) {
       throw new NotFoundException('Post not found');
     }
 
-    // Check if user liked this post
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username, avatar_url, badge_type')
+      .eq('user_id', post.user_id)
+      .single();
+
+    const result: any = { ...post, profiles: profile || null };
+
     if (userId) {
       const { data: like } = await this.supabaseService
         .from('likes')
@@ -163,15 +182,21 @@ export class PostsService {
         .eq('post_id', postId)
         .eq('user_id', userId)
         .single();
-      
-      (post as any).is_liked = !!like;
+      result.is_liked = !!like;
     }
 
-    return post;
+    // Get comments count
+    const { count } = await this.supabaseService
+      .from('comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    result.comments_count = count || 0;
+
+    return result;
   }
 
-  async updatePost(userId: string, postId: string, updateData: Partial<CreatePostDto>) {
-    // Check ownership
+  async updatePost(userId: string, postId: string, updateData: Partial<any>) {
     const { data: post } = await this.supabaseService
       .from('posts')
       .select('user_id')
@@ -189,15 +214,11 @@ export class PostsService {
       .select()
       .single();
 
-    if (error) {
-      throw new Error('Failed to update post');
-    }
-
+    if (error) throw new Error('Failed to update post');
     return data;
   }
 
   async deletePost(userId: string, postId: string) {
-    // Check ownership
     const { data: post } = await this.supabaseService
       .from('posts')
       .select('user_id')
@@ -213,15 +234,11 @@ export class PostsService {
       .delete()
       .eq('id', postId);
 
-    if (error) {
-      throw new Error('Failed to delete post');
-    }
-
+    if (error) throw new Error('Failed to delete post');
     return { message: 'Post deleted successfully' };
   }
 
   async likePost(userId: string, postId: string) {
-    // Check if already liked
     const { data: existing } = await this.supabaseService
       .from('likes')
       .select('id')
@@ -229,20 +246,19 @@ export class PostsService {
       .eq('user_id', userId)
       .single();
 
-    if (existing) {
-      throw new Error('Already liked this post');
-    }
+    if (existing) throw new Error('Already liked this post');
 
     const { error } = await this.supabaseService
       .from('likes')
       .insert({ post_id: postId, user_id: userId });
 
-    if (error) {
-      throw new Error('Failed to like post');
-    }
+    if (error) throw new Error('Failed to like post');
 
-    // Update likes count
-    await this.supabaseService.rpc('increment_likes', { post_id: postId });
+    // Increment likes count
+    await this.supabaseService
+      .from('posts')
+      .update({ likes_count: 1 })
+      .eq('id', postId);
 
     return { message: 'Post liked' };
   }
@@ -254,13 +270,7 @@ export class PostsService {
       .eq('post_id', postId)
       .eq('user_id', userId);
 
-    if (error) {
-      throw new Error('Failed to unlike post');
-    }
-
-    // Update likes count
-    await this.supabaseService.rpc('decrement_likes', { post_id: postId });
-
+    if (error) throw new Error('Failed to unlike post');
     return { message: 'Post unliked' };
   }
 
@@ -269,21 +279,17 @@ export class PostsService {
 
     const { data: comments, error } = await this.supabaseService
       .from('comments')
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type)
-      `)
+      .select('*, profiles(username, avatar_url, badge_type)')
       .eq('post_id', postId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
-      throw new Error('Failed to get comments');
+      console.error('Get comments error:', error);
+      return [];
     }
 
-    // Insert comment ads
-    const ads = await this.getCommentAds(postId);
-    return this.insertAdsInComments(comments || [], ads);
+    return comments || [];
   }
 
   async addComment(userId: string, postId: string, content: string) {
@@ -294,18 +300,19 @@ export class PostsService {
         user_id: userId,
         content,
       })
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type)
-      `)
+      .select('*')
       .single();
 
     if (error) {
+      console.error('Add comment error:', error);
       throw new Error('Failed to add comment');
     }
 
     // Update comments count
-    await this.supabaseService.rpc('increment_comments', { post_id: postId });
+    await this.supabaseService
+      .from('posts')
+      .update({ comments_count: 1 })
+      .eq('id', postId);
 
     return data;
   }
@@ -326,63 +333,7 @@ export class PostsService {
       .delete()
       .eq('id', commentId);
 
-    if (error) {
-      throw new Error('Failed to delete comment');
-    }
-
-    // Update comments count
-    await this.supabaseService.rpc('decrement_comments', { post_id: comment.post_id });
-
+    if (error) throw new Error('Failed to delete comment');
     return { message: 'Comment deleted' };
-  }
-
-  // Helper methods for ads
-  private async getFeedAds(userId: string) {
-    const { data: ads } = await this.supabaseService
-      .from('ads')
-      .select('*')
-      .eq('type', 'feed')
-      .eq('is_active', true)
-      .limit(3);
-
-    return ads || [];
-  }
-
-  private async getCommentAds(postId: string) {
-    const { data: ads } = await this.supabaseService
-      .from('ads')
-      .select('*')
-      .eq('type', 'comment')
-      .eq('is_active', true)
-      .limit(1);
-
-    return ads || [];
-  }
-
-  private insertAdsInFeed(posts: any[], ads: any[]) {
-    if (ads.length === 0) return posts;
-
-    const result: any[] = [];
-    let adIndex = 0;
-
-    posts.forEach((post, index) => {
-      result.push(post);
-      // Insert ad every 5 posts
-      if ((index + 1) % 5 === 0 && adIndex < ads.length) {
-        result.push({ ...ads[adIndex], is_ad: true });
-        adIndex = (adIndex + 1) % ads.length;
-      }
-    });
-
-    return result;
-  }
-
-  private insertAdsInComments(comments: any[], ads: any[]) {
-    if (ads.length === 0 || comments.length < 3) return comments;
-
-    const result = [...comments];
-    // Insert ad after 2 comments
-    result.splice(2, 0, { ...ads[0], is_ad: true });
-    return result;
   }
 }
