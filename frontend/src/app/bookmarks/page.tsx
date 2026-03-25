@@ -74,7 +74,9 @@ export default function BookmarksPage() {
                       <span className="text-[#71767b]">·</span>
                       <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
                     </div>
-                    <p className="text-white mt-1">{post.caption}</p>
+                    {(post.caption || post.content) && (
+                      <p className="text-white mt-1 whitespace-pre-wrap">{post.caption || post.content}</p>
+                    )}
                     
                     <div className="flex items-center justify-between mt-3 max-w-md">
                       <button className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group">
@@ -97,6 +99,14 @@ export default function BookmarksPage() {
                       <button className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group">
                         <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
                           <Share className="w-4 h-4" />
+                        </div>
+                      </button>
+                      <button 
+                        className="flex items-center gap-1 text-[#1d9bf0] hover:text-[#1a8cd8] group"
+                        title="Remove bookmark"
+                      >
+                        <div className="p-2 rounded-full bg-[#1d9bf0]/10 group-hover:bg-[#1d9bf0]/20 transition-colors">
+                          <Bookmark className="w-4 h-4 fill-[#1d9bf0]" />
                         </div>
                       </button>
                     </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { postsAPI } from '@/lib/api';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Post {
@@ -32,9 +32,22 @@ export default function Feed() {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadPosts();
+  }, []);
+
+  useEffect(() => {
+    // Close menu when clicking outside
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadPosts = async () => {
@@ -72,12 +85,10 @@ export default function Feed() {
 
   const handleShare = async (postId: string) => {
     try {
-      // Copy link to clipboard
       const url = `${window.location.origin}/post/${postId}`;
       await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard!');
       
-      // Update share count
       setPosts(posts.map(p => {
         if (p.id === postId) {
           return { ...p, shares_count: (p.shares_count || 0) + 1 };
@@ -87,6 +98,24 @@ export default function Feed() {
     } catch (error) {
       toast.error('Failed to share post');
     }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    try {
+      await postsAPI.delete(postId);
+      setPosts(posts.filter(p => p.id !== postId));
+      toast.success('Post deleted');
+    } catch (error) {
+      toast.error('Failed to delete post');
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleCopyText = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Text copied!');
+    setOpenMenuId(null);
   };
 
   const loadComments = async (postId: string) => {
@@ -181,9 +210,52 @@ export default function Feed() {
                   <span className="text-[#71767b]">@{username}</span>
                   <span className="text-[#71767b]">·</span>
                   <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
-                  <button className="ml-auto p-1.5 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full transition-colors">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                  
+                  {/* Three-dot Menu */}
+                  <div className="ml-auto relative" ref={menuRef}>
+                    <button 
+                      onClick={() => setOpenMenuId(openMenuId === post.id ? null : post.id)}
+                      className="p-1.5 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full transition-colors"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                    
+                    {openMenuId === post.id && (
+                      <div className="absolute right-0 top-8 w-48 bg-black border border-[#2f3336] rounded-xl shadow-lg overflow-hidden z-20">
+                        <button 
+                          onClick={() => handleCopyText(content)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copy text
+                        </button>
+                        <button 
+                          onClick={() => handleShare(post.id)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
+                        >
+                          <LinkIcon className="w-4 h-4" />
+                          Copy link to post
+                        </button>
+                        <button 
+                          onClick={() => {
+                            toast('Report feature coming soon', { icon: 'ℹ️' });
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
+                        >
+                          <Flag className="w-4 h-4" />
+                          Report post
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePost(post.id)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2f3336]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete post
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Caption */}
