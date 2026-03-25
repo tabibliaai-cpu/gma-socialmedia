@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: social-app-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
