@@ -64,9 +64,8 @@ export default function ProfilePage() {
     if (!profile?.user_id) return;
     
     try {
-      // Start a conversation with this user
-      const { data } = await chatAPI.startConversation(profile.user_id);
-      toast.success('Conversation started!');
+      // For now, just redirect to chat - TODO: implement startConversation API
+      toast.success('Opening chat...');
       router.push('/chat');
     } catch (error) {
       toast.error('Failed to start conversation');
