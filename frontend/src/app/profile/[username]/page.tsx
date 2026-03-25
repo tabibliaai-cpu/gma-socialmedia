@@ -1,133 +1,206 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { usersAPI } from '@/lib/api';
-import toast from 'react-hot-toast';
+import { usersAPI, postsAPI } from '@/lib/api';
+import MainLayout from '@/components/MainLayout';
+import { Calendar, MapPin, Link as LinkIcon } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const params = useParams();
+  const username = params?.username as string;
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('posts');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (user?.username) {
+    if (username) {
       loadProfile();
     }
-  }, [user]);
+  }, [username]);
 
   const loadProfile = async () => {
+    setLoading(true);
+    setError(false);
     try {
-      const { data } = await usersAPI.getUserProfile(user.username);
-      setProfile(data);
-      setPosts(data.posts || []);
-    } catch (error) {
-      console.error('Failed to load profile:', error);
+      // Try to get user profile by username
+      const { data: profileData } = await usersAPI.getUserProfile(username);
+      setProfile(profileData);
+      
+      // Load user posts
+      if (profileData?.id) {
+        try {
+          const { data: postsData } = await postsAPI.getUserPosts(profileData.id);
+          setPosts(postsData || []);
+        } catch (e) {
+          setPosts([]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
   };
 
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
+      <MainLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div>
+        </div>
+      </MainLayout>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-black">
-      {/* Cover Image */}
-      <div className="h-48 bg-gradient-to-r from-primary/30 to-accent/30 relative">
-        <div className="absolute inset-0 bg-dark-100/50"></div>
-      </div>
+  if (error || !profile) {
+    return (
+      <MainLayout>
+        <div className="text-center py-20">
+          <p className="text-[#71767b] text-xl">User not found</p>
+          <p className="text-[#71767b] text-sm mt-2">The user @{username} doesn't exist.</p>
+          <Link href="/feed" className="text-[#1d9bf0] hover:underline mt-4 inline-block">
+            Go back to feed
+          </Link>
+        </div>
+      </MainLayout>
+    );
+  }
 
-      {/* Profile Header */}
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="relative -mt-16 mb-4">
-          {/* Avatar */}
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-accent border-4 border-black flex items-center justify-center text-white text-4xl font-bold">
-            {user?.username?.[0]?.toUpperCase() || 'U'}
+  const isOwnProfile = currentUser?.username === username;
+
+  return (
+    <MainLayout>
+      <div className="max-w-[600px] mx-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 px-4 py-3 border-b border-[#2f3336]">
+          <div className="flex items-center gap-6">
+            <h1 className="text-xl font-bold text-white">{profile.username}</h1>
+          </div>
+        </div>
+
+        {/* Cover Image */}
+        <div className="h-48 bg-gradient-to-r from-[#1d9bf0]/30 to-[#7856ff]/30 relative">
+          <div className="absolute inset-0 bg-[#16181c]/50"></div>
+        </div>
+
+        {/* Profile Header */}
+        <div className="px-4">
+          <div className="relative -mt-16 mb-4">
+            {/* Avatar */}
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] border-4 border-black flex items-center justify-center text-white text-3xl md:text-4xl font-bold">
+              {profile.username?.[0]?.toUpperCase() || 'U'}
+            </div>
+
+            {/* Action Button */}
+            <div className="absolute right-0 top-20">
+              {isOwnProfile ? (
+                <Link
+                  href="/settings/profile"
+                  className="px-4 py-2 border border-[#2f3336] text-white font-bold rounded-full hover:bg-[#181836] transition-colors"
+                >
+                  Edit profile
+                </Link>
+              ) : (
+                <button className="px-6 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors">
+                  Follow
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Edit Profile Button */}
-          <Link
-            href="/settings/profile"
-            className="absolute right-0 top-20 px-4 py-2 border border-dark-300 text-white font-bold rounded-full hover:bg-dark-100 transition-colors"
-          >
-            Edit profile
-          </Link>
-        </div>
+          {/* Profile Info */}
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-white">{profile.name || profile.username}</h2>
+            <p className="text-[#71767b]">@{profile.username}</p>
+          </div>
 
-        {/* Profile Info */}
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-white">{profile?.username || user?.username}</h1>
-          <p className="text-dark-500">@{profile?.username || user?.username}</p>
-        </div>
-
-        {profile?.bio && (
-          <p className="text-white mb-4">{profile.bio}</p>
-        )}
-
-        {/* Stats */}
-        <div className="flex gap-4 mb-4 text-sm">
-          <Link href={`/profile/${user?.username}/following`} className="hover:underline">
-            <span className="font-bold text-white">{profile?.following_count || 0}</span>
-            <span className="text-dark-500 ml-1">Following</span>
-          </Link>
-          <Link href={`/profile/${user?.username}/followers`} className="hover:underline">
-            <span className="font-bold text-white">{profile?.followers_count || 0}</span>
-            <span className="text-dark-500 ml-1">Followers</span>
-          </Link>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-dark-100">
-          <nav className="flex">
-            {['Posts', 'Replies', 'Media', 'Likes'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab.toLowerCase())}
-                className={`flex-1 py-4 text-center font-medium transition-colors relative ${
-                  activeTab === tab.toLowerCase()
-                    ? 'text-white'
-                    : 'text-dark-500 hover:bg-dark-100 hover:text-white'
-                }`}
-              >
-                {tab}
-                {activeTab === tab.toLowerCase() && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-primary rounded-full"></div>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Posts */}
-        <div className="divide-y divide-dark-100">
-          {posts.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-dark-500 text-lg">No posts yet</p>
-              <Link href="/create/post" className="text-primary hover:underline mt-2 inline-block">
-                Create your first post
-              </Link>
-            </div>
-          ) : (
-            posts.map((post) => (
-              <article key={post.id} className="p-4 hover:bg-dark-50/50 transition-colors cursor-pointer">
-                <p className="text-white whitespace-pre-wrap">{post.caption}</p>
-                <p className="text-dark-500 text-sm mt-2">
-                  {new Date(post.created_at).toLocaleDateString()}
-                </p>
-              </article>
-            ))
+          {profile.bio && (
+            <p className="text-white mb-4 whitespace-pre-wrap">{profile.bio}</p>
           )}
+
+          {/* Metadata */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#71767b] text-sm mb-4">
+            {profile.created_at && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Joined {formatTime(profile.created_at)}
+              </span>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="flex gap-4 mb-4 text-sm">
+            <Link href={`/profile/${username}/following`} className="hover:underline">
+              <span className="font-bold text-white">{profile.following_count || 0}</span>
+              <span className="text-[#71767b] ml-1">Following</span>
+            </Link>
+            <Link href={`/profile/${username}/followers`} className="hover:underline">
+              <span className="font-bold text-white">{profile.followers_count || 0}</span>
+              <span className="text-[#71767b] ml-1">Followers</span>
+            </Link>
+          </div>
+
+          {/* Tabs */}
+          <div className="border-b border-[#2f3336]">
+            <nav className="flex">
+              {['Posts', 'Replies', 'Media', 'Likes'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab.toLowerCase())}
+                  className={`flex-1 py-4 text-center font-medium transition-colors relative ${
+                    activeTab === tab.toLowerCase()
+                      ? 'text-white'
+                      : 'text-[#71767b] hover:bg-[#181836] hover:text-white'
+                  }`}
+                >
+                  {tab}
+                  {activeTab === tab.toLowerCase() && (
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Posts */}
+          <div className="divide-y divide-[#2f3336]">
+            {posts.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-[#71767b] text-lg">
+                  {isOwnProfile ? "You haven't posted yet" : "No posts yet"}
+                </p>
+                {isOwnProfile && (
+                  <Link href="/create/post" className="text-[#1d9bf0] hover:underline mt-2 inline-block">
+                    Create your first post
+                  </Link>
+                )}
+              </div>
+            ) : (
+              posts.map((post) => (
+                <article key={post.id} className="p-4 hover:bg-[#181836]/50 transition-colors cursor-pointer">
+                  <p className="text-white whitespace-pre-wrap">{post.caption || post.content}</p>
+                  <p className="text-[#71767b] text-sm mt-2">
+                    {formatTime(post.created_at)}
+                  </p>
+                </article>
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

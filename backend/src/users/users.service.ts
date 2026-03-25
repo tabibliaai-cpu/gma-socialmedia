@@ -49,26 +49,23 @@ export class UsersService {
   }
 
   async getPublicProfile(username: string) {
+    // Get profile by username
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
-      .select(`
-        user_id,
-        username,
-        bio,
-        avatar_url,
-        badge_type,
-        followers_count,
-        following_count,
-        users (
-          role
-        )
-      `)
+      .select('user_id, username, bio, avatar_url, badge_type, followers_count, following_count')
       .eq('username', username)
       .single();
 
-    if (error) {
+    if (error || !profile) {
       throw new NotFoundException('User not found');
     }
+
+    // Get user role separately
+    const { data: user } = await this.supabaseService
+      .from('users')
+      .select('role, created_at')
+      .eq('id', profile.user_id)
+      .single();
 
     // Check privacy settings
     const { data: privacy } = await this.supabaseService
@@ -81,7 +78,11 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return profile;
+    return {
+      ...profile,
+      role: user?.role,
+      created_at: user?.created_at,
+    };
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
