@@ -13,10 +13,14 @@ export class PaymentsService {
     private configService: ConfigService,
     private supabaseService: SupabaseService,
   ) {
-    this.razorpay = new Razorpay({
-      key_id: this.configService.get('RAZORPAY_KEY_ID'),
-      key_secret: this.configService.get('RAZORPAY_KEY_SECRET'),
-    });
+const razorpayKeyId = this.configService.get('RAZORPAY_KEY_ID');
+      const razorpayKeySecret = this.configService.get('RAZORPAY_KEY_SECRET');
+      if (razorpayKeyId && razorpayKeySecret) {
+        this.razorpay = new Razorpay({
+          key_id: razorpayKeyId,
+          key_secret: razorpayKeySecret,
+        });
+      }
   }
 
   async createOrder(userId: string, dto: CreateOrderDto) {
