@@ -7,8 +7,8 @@ export class SupabaseService {
   private client: SupabaseClient;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get('SUPABASE_URL');
-    const supabaseKey = this.configService.get('SUPABASE_SERVICE_KEY');
+    const supabaseUrl = (this.configService.get('SUPABASE_URL') || '').trim();
+    const supabaseKey = (this.configService.get('SUPABASE_SERVICE_KEY') || '').trim();
 
     this.client = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -22,23 +22,19 @@ export class SupabaseService {
     return this.client;
   }
 
-  // Auth operations
-  get auth() {
-    return this.client.auth as any;
+  auth() {
+    return this.client.auth;
   }
 
-  // Storage operations
-  get storage() {
-    return this.client.storage as any;
+  storage() {
+    return this.client.storage;
   }
 
-  // Database operations helper
   from(table: string) {
     return this.client.from(table);
   }
 
-  // RPC calls
-  rpc(fn: string, args?: Record<string, any>) {
-    return this.client.rpc(fn, args);
+  rpc(fn: string, params?: object) {
+    return this.client.rpc(fn, params);
   }
 }
