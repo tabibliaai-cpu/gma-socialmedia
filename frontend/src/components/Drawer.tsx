@@ -161,18 +161,18 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
               <div className="border-t border-[#2f3336]">
                 {/* Profile Link */}
                 <button
-                  onClick={() => handleNavClick(`/profile/${user.username || user.id}`)}
+                  onClick={() => handleNavClick(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
                   className="w-full flex items-center gap-3 p-4 hover:bg-[#181836] transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
-                    {user.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                    {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-white font-bold truncate">
-                      {user.profile?.username || user.username || 'User'}
+                      {user?.profile?.username || user?.username || 'User'}
                     </p>
                     <p className="text-[#71767b] text-sm truncate">
-                      @{user.profile?.username || user.username || 'user'}
+                      @{user?.profile?.username || user?.username || 'user'}
                     </p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#71767b]" />

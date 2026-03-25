@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { usersAPI, postsAPI } from '@/lib/api';
+import { usersAPI, postsAPI, chatAPI } from '@/lib/api';
 import MainLayout from '@/components/MainLayout';
-import { Calendar, MapPin, Link as LinkIcon, ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { Calendar, MapPin, Link as LinkIcon, ArrowLeft, MoreHorizontal, MessageCircle, UserPlus, Camera } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const params = useParams();
@@ -19,6 +20,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBio, setEditBio] = useState('');
+  const [editDisplayName, setEditDisplayName] = useState('');
 
   useEffect(() => {
     if (username) {
@@ -32,10 +36,12 @@ export default function ProfilePage() {
     try {
       const { data: profileData } = await usersAPI.getUserProfile(username);
       setProfile(profileData);
+      setEditBio(profileData?.bio || '');
+      setEditDisplayName(profileData?.name || profileData?.username || '');
       
-      if (profileData?.id) {
+      if (profileData?.user_id) {
         try {
-          const { data: postsData } = await postsAPI.getUserPosts(profileData.id);
+          const { data: postsData } = await postsAPI.getUserPosts(profileData.user_id);
           setPosts(postsData || []);
         } catch (e) {
           setPosts([]);
@@ -50,9 +56,35 @@ export default function ProfilePage() {
   };
 
   const handleFollow = async () => {
-    // Toggle follow state
     setIsFollowing(!isFollowing);
-    // TODO: Call API to follow/unfollow
+    toast.success(isFollowing ? 'Unfollowed' : 'Following');
+  };
+
+  const handleMessage = async () => {
+    if (!profile?.user_id) return;
+    
+    try {
+      // Start a conversation with this user
+      const { data } = await chatAPI.startConversation(profile.user_id);
+      toast.success('Conversation started!');
+      router.push('/chat');
+    } catch (error) {
+      toast.error('Failed to start conversation');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      await usersAPI.updateProfile({
+        bio: editBio,
+        name: editDisplayName,
+      });
+      setProfile({ ...profile, bio: editBio, name: editDisplayName });
+      setIsEditing(false);
+      toast.success('Profile updated!');
+    } catch (error) {
+      toast.error('Failed to update profile');
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -80,7 +112,8 @@ export default function ProfilePage() {
   // Check if this is the current user's profile
   const isOwnProfile = currentUser?.profile?.username === username || 
                        currentUser?.username === username ||
-                       currentUser?.id === profile?.user_id;
+                       currentUser?.id === profile?.user_id ||
+                       currentUser?.user_id === profile?.user_id;
 
   if (loading) {
     return (
@@ -126,49 +159,94 @@ export default function ProfilePage() {
         {/* Cover Image */}
         <div className="h-48 bg-gradient-to-r from-[#1d9bf0]/30 to-[#7856ff]/30 relative">
           <div className="absolute inset-0 bg-[#16181c]/50"></div>
+          {isOwnProfile && isEditing && (
+            <button className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors">
+              <Camera className="h-5 w-5 text-white" />
+            </button>
+          )}
         </div>
 
         {/* Profile Header */}
         <div className="px-4">
           <div className="relative -mt-16 mb-4">
             {/* Avatar */}
-            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] border-4 border-black flex items-center justify-center text-white text-3xl md:text-4xl font-bold">
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] border-4 border-black flex items-center justify-center text-white text-3xl md:text-4xl font-bold relative">
               {profile.username?.[0]?.toUpperCase() || 'U'}
+              {isOwnProfile && isEditing && (
+                <button className="absolute bottom-0 right-0 p-2 bg-[#1d9bf0] rounded-full hover:bg-[#1a8cd8] transition-colors">
+                  <Camera className="h-4 w-4 text-white" />
+                </button>
+              )}
             </div>
 
-            {/* Action Button */}
-            <div className="absolute right-0 top-20">
+            {/* Action Buttons */}
+            <div className="absolute right-0 top-20 flex gap-2">
               {isOwnProfile ? (
-                <Link
-                  href="/settings/profile"
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
                   className="px-4 py-2 border border-[#2f3336] text-white font-bold rounded-full hover:bg-[#181836] transition-colors"
                 >
-                  Edit profile
-                </Link>
-              ) : (
-                <button 
-                  onClick={handleFollow}
-                  className={`px-6 py-2 font-bold rounded-full transition-colors ${
-                    isFollowing 
-                      ? 'border border-[#2f3336] text-white hover:border-red-500 hover:text-red-500' 
-                      : 'bg-white text-black hover:bg-gray-200'
-                  }`}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isEditing ? 'Cancel' : 'Edit profile'}
                 </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleMessage}
+                    className="p-2 border border-[#2f3336] text-white rounded-full hover:bg-[#181836] transition-colors"
+                    title="Message"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={handleFollow}
+                    className={`px-6 py-2 font-bold rounded-full transition-colors ${
+                      isFollowing 
+                        ? 'border border-[#2f3336] text-white hover:border-red-500 hover:text-red-500' 
+                        : 'bg-white text-black hover:bg-gray-200'
+                    }`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                </>
               )}
             </div>
           </div>
 
           {/* Profile Info */}
           <div className="mb-4">
-            <h2 className="text-xl font-bold text-white">{profile.name || profile.username}</h2>
-            <p className="text-[#71767b]">@{profile.username}</p>
+            {isEditing ? (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  placeholder="Display name"
+                  className="w-full px-3 py-2 bg-black border border-[#2f3336] rounded-lg text-white focus:outline-none focus:border-[#1d9bf0]"
+                />
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="Bio"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-black border border-[#2f3336] rounded-lg text-white focus:outline-none focus:border-[#1d9bf0] resize-none"
+                />
+                <button
+                  onClick={handleSaveProfile}
+                  className="px-4 py-2 bg-[#1d9bf0] text-white font-bold rounded-full hover:bg-[#1a8cd8]"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-white">{profile.name || profile.username}</h2>
+                <p className="text-[#71767b]">@{profile.username}</p>
+                {profile.bio && (
+                  <p className="text-white mt-2 whitespace-pre-wrap">{profile.bio}</p>
+                )}
+              </>
+            )}
           </div>
-
-          {profile.bio && (
-            <p className="text-white mb-4 whitespace-pre-wrap">{profile.bio}</p>
-          )}
 
           {/* Metadata */}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#71767b] text-sm mb-4">

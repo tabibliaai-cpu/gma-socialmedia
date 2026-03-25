@@ -183,15 +183,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* User Profile */}
         <div className="mt-auto">
           <button 
-            onClick={() => router.push(`/profile/${user?.profile?.username || user?.username || user?.id}`)}
+            onClick={() => router.push(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
             className="flex items-center gap-3 p-3 rounded-full hover:bg-[#181836] cursor-pointer transition-colors w-full"
           >
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
               {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0 hidden xl:block text-left">
-              <p className="font-bold text-white text-sm truncate">{user?.profile?.username || user?.username}</p>
-              <p className="text-[#71767b] text-sm truncate">@{user?.profile?.username || user?.username}</p>
+              <p className="font-bold text-white text-sm truncate">{user?.profile?.username || user?.username || 'User'}</p>
+              <p className="text-[#71767b] text-sm truncate">@{user?.profile?.username || user?.username || 'user'}</p>
             </div>
           </button>
         </div>
