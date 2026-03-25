@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       if (token) {
@@ -32,16 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data } = await authAPI.getProfile();
           setUser(data);
+          localStorage.setItem('user', JSON.stringify(data));
         } catch (profileError: any) {
-          // Only clear token on 401 (unauthorized), not on network errors
+          console.log('Profile fetch error:', profileError?.response?.status);
           if (profileError?.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-          }
-          // For other errors (500, network), keep the token and use cached user
-          const cachedUser = localStorage.getItem('user');
-          if (cachedUser) {
-            try { setUser(JSON.parse(cachedUser)); } catch {}
+            setUser(null);
+          } else {
+            // For other errors, try cached user
+            const cachedUser = localStorage.getItem('user');
+            if (cachedUser) {
+              try { setUser(JSON.parse(cachedUser)); } catch {}
+            }
           }
         }
       }
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await authAPI.getProfile();
       setUser(data);
+      localStorage.setItem('user', JSON.stringify(data));
     } catch (error) {
       console.error('Failed to refresh profile:', error);
     }

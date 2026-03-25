@@ -90,9 +90,9 @@ export default function ChatPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex flex-col md:flex-row">
         {/* Conversations List */}
-        <aside className="w-[350px] border-r border-[#2f3336] flex flex-col">
+        <aside className={`w-full md:w-[350px] border-r border-[#2f3336] flex flex-col ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
           <div className="sticky top-0 bg-black z-10 p-4 border-b border-[#2f3336]">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold text-white">Messages</h1>
@@ -147,16 +147,25 @@ export default function ChatPage() {
         </aside>
 
         {/* Chat Area */}
-        <main className="flex-1 flex flex-col">
+        <main className={`flex-1 flex flex-col ${selectedChat ? 'flex' : 'hidden md:flex'}`}>
           {selectedChat ? (
             <>
               <div className="sticky top-0 bg-black z-10 p-4 border-b border-[#2f3336] flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                {/* Back button for mobile */}
+                <button 
+                  onClick={() => setSelectedChat(null)}
+                  className="md:hidden p-2 -ml-2 hover:bg-[#181836] rounded-full transition-colors"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
                   {selectedChat.participant.username[0].toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-bold text-white">{selectedChat.participant.username}</p>
-                  <p className="text-[#71767b] text-sm">@{selectedChat.participant.username}</p>
+                <div className="min-w-0">
+                  <p className="font-bold text-white truncate">{selectedChat.participant.username}</p>
+                  <p className="text-[#71767b] text-sm truncate">@{selectedChat.participant.username}</p>
                 </div>
               </div>
 
@@ -205,7 +214,7 @@ export default function ChatPage() {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center p-4">
               <div className="text-center max-w-sm">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#202327] flex items-center justify-center">
                   <svg className="w-8 h-8 text-[#71767b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +222,7 @@ export default function ChatPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">Select a conversation</h2>
-                <p className="text-[#71767b]">Choose from your existing conversations or start a new one</p>
+                <p className="text-[#71767b] text-wrap">Choose from your existing conversations, or start a new one</p>
               </div>
             </div>
           )}

@@ -10,14 +10,15 @@ export class PostsService {
     const insertData: any = {
       user_id: userId,
       content: createPostDto.caption,
+      caption: createPostDto.caption,
       likes_count: 0,
       comments_count: 0,
       shares_count: 0,
+      created_at: new Date().toISOString(),
     };
 
     if (createPostDto.media_url) insertData.media_url = createPostDto.media_url;
     if (createPostDto.media_type) insertData.media_type = createPostDto.media_type;
-    if (createPostDto.caption) insertData.caption = createPostDto.caption;
 
     const { data, error } = await this.supabaseService
       .from('posts')

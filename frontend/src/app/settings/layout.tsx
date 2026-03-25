@@ -8,14 +8,30 @@ import { Lock, User, Bell, Shield, Palette, Globe, HelpCircle, LogOut, ChevronRi
 import Link from 'next/link';
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       router.push('/login');
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
