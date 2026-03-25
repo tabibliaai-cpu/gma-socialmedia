@@ -17,6 +17,7 @@ import { SearchModule } from './search/search.module';
 import { ArticlesModule } from './articles/articles.module';
 import { AffiliatesModule } from './affiliates/affiliates.module';
 import { SetupModule } from './setup/setup.module';
+import { HealthModule } from './health/health.module';
 
 // Services
 import { SupabaseService } from './common/supabase/supabase.service';
@@ -43,6 +44,7 @@ import { SupabaseService } from './common/supabase/supabase.service';
     }),
 
     // Feature Modules
+    HealthModule,
     AuthModule,
     UsersModule,
     PostsModule,
