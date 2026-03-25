@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Drawer from './Drawer';
+import { Menu, Plus } from 'lucide-react';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -135,7 +138,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
-  return (
+  const content = (
     <div className="min-h-screen bg-black flex">
       {/* Left Sidebar - Desktop */}
       <aside className="hidden md:flex w-[275px] shrink-0 h-screen sticky top-0 flex-col justify-between py-2 px-2 xl:px-4">
@@ -179,20 +182,49 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* User Profile */}
         <div className="mt-auto">
-          <div className="flex items-center gap-3 p-3 rounded-full hover:bg-[#181836] cursor-pointer transition-colors">
+          <button 
+            onClick={() => router.push(`/profile/${user?.profile?.username || user?.username || user?.id}`)}
+            className="flex items-center gap-3 p-3 rounded-full hover:bg-[#181836] cursor-pointer transition-colors w-full"
+          >
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
-              {user?.username?.[0]?.toUpperCase() || 'U'}
+              {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
-            <div className="flex-1 min-w-0 hidden xl:block">
-              <p className="font-bold text-white text-sm truncate">{user?.username}</p>
-              <p className="text-[#71767b] text-sm truncate">@{user?.username}</p>
+            <div className="flex-1 min-w-0 hidden xl:block text-left">
+              <p className="font-bold text-white text-sm truncate">{user?.profile?.username || user?.username}</p>
+              <p className="text-[#71767b] text-sm truncate">@{user?.profile?.username || user?.username}</p>
             </div>
-          </div>
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 border-x border-[#2f3336] pb-16 md:pb-0">
+        {/* Mobile Header */}
+        <header className="md:hidden sticky top-0 bg-black/80 backdrop-blur-md z-30 px-4 py-3 border-b border-[#2f3336]">
+          <div className="flex items-center justify-between">
+            {/* Menu Button */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 -ml-2 hover:bg-[#181836] rounded-full transition-colors"
+            >
+              <Menu className="w-6 h-6 text-white" />
+            </button>
+
+            {/* Logo */}
+            <Link href="/feed" className="text-xl font-bold text-white">
+              GPM
+            </Link>
+
+            {/* Post Button */}
+            <button
+              onClick={() => router.push('/create/post')}
+              className="p-2 -mr-2 hover:bg-[#181836] rounded-full transition-colors"
+            >
+              <Plus className="w-6 h-6 text-white" />
+            </button>
+          </div>
+        </header>
+
         {children}
       </main>
 
@@ -242,7 +274,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#2f3336] md:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#2f3336] md:hidden z-40">
         <div className="flex justify-around items-center py-2">
           {navItems.slice(0, 5).map((item) => (
             <Link
@@ -255,25 +287,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               {getIcon(item.icon, isActive(item.href))}
             </Link>
           ))}
-          {/* More menu for mobile */}
-          <button 
-            onClick={() => router.push('/settings')}
-            className="flex flex-col items-center p-2 text-[#71767b]"
-          >
-            {getIcon('settings', false)}
-          </button>
         </div>
       </nav>
-
-      {/* Mobile FAB */}
-      <button
-        onClick={() => router.push('/create/post')}
-        className="fixed bottom-20 right-4 md:hidden w-14 h-14 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full shadow-lg flex items-center justify-center z-40"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
     </div>
+  );
+
+  return (
+    <Drawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)}>
+      {content}
+    </Drawer>
   );
 }
