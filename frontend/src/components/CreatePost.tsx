@@ -36,6 +36,8 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
       setMediaUrl('');
       setShowMediaInput(false);
       onPostCreated?.();
+      // Reload the page to show new post
+      window.location.reload();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create post');
     } finally {
@@ -43,13 +45,16 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
     }
   };
 
+  const charCount = caption.length;
+  const charLimit = 280;
+
   return (
-    <div className="bg-dark-50 border border-dark-100 rounded-2xl overflow-hidden">
+    <div className="bg-transparent">
       <form onSubmit={handleSubmit}>
-        <div className="flex gap-3 p-4">
+        <div className="flex gap-3">
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white font-bold">
-            {user?.username?.[0]?.toUpperCase() || 'U'}
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white font-bold">
+            {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
           </div>
 
           {/* Content */}
@@ -58,8 +63,9 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="What's happening?"
-              className="w-full bg-transparent border-none text-xl text-white placeholder-dark-500 focus:outline-none resize-none min-h-[80px]"
+              className="w-full bg-transparent border-none text-xl text-white placeholder-[#71767b] focus:outline-none resize-none min-h-[60px]"
               rows={2}
+              maxLength={charLimit}
             />
 
             {showMediaInput && (
@@ -69,7 +75,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
                   value={mediaUrl}
                   onChange={(e) => setMediaUrl(e.target.value)}
                   placeholder="Paste image or video URL"
-                  className="flex-1 px-4 py-2 bg-dark-100 border border-dark-200 rounded-lg text-white text-sm placeholder-dark-500 focus:outline-none focus:border-primary transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#202327] border border-[#2f3336] rounded-lg text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
                 />
                 <button
                   type="button"
@@ -77,7 +83,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
                     setMediaUrl('');
                     setShowMediaInput(false);
                   }}
-                  className="p-2 text-dark-500 hover:text-white transition-colors"
+                  className="p-2 text-[#71767b] hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -87,12 +93,12 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between px-4 pb-4">
+        <div className="flex items-center justify-between mt-3 pl-13">
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setShowMediaInput(true)}
-              className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
               title="Add image"
             >
               <Image className="w-5 h-5" />
@@ -100,38 +106,45 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
             <button
               type="button"
               onClick={() => setShowMediaInput(true)}
-              className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
               title="Add video"
             >
               <Video className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
               title="Add emoji"
             >
               <Smile className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
               title="Schedule"
             >
               <Calendar className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
               title="Add location"
             >
               <MapPin className="w-5 h-5" />
             </button>
+            
+            {/* Character counter */}
+            {caption.length > 0 && (
+              <span className={`ml-2 text-sm ${charCount > charLimit - 20 ? 'text-yellow-500' : 'text-[#71767b]'}`}>
+                {charLimit - charCount}
+              </span>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={loading || (!caption.trim() && !mediaUrl)}
-            className="px-5 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-all text-sm"
+            className="px-5 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-all text-sm"
           >
             {loading ? 'Posting...' : 'Post'}
           </button>

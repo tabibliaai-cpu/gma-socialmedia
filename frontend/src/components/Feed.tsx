@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { postsAPI } from '@/lib/api';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Post {
@@ -18,6 +18,7 @@ interface Post {
   shares_count: number;
   created_at: string;
   is_liked?: boolean;
+  is_bookmarked?: boolean;
   is_ad?: boolean;
   profiles?: {
     username: string;
@@ -40,7 +41,6 @@ export default function Feed() {
   }, []);
 
   useEffect(() => {
-    // Close menu when clicking outside
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null);
@@ -83,20 +83,48 @@ export default function Feed() {
     }
   };
 
-  const handleShare = async (postId: string) => {
+  const handleRetweet = async (postId: string) => {
     try {
-      const url = `${window.location.origin}/post/${postId}`;
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard!');
-      
+      await postsAPI.share(postId);
       setPosts(posts.map(p => {
         if (p.id === postId) {
           return { ...p, shares_count: (p.shares_count || 0) + 1 };
         }
         return p;
       }));
+      toast.success('Post shared!');
     } catch (error) {
       toast.error('Failed to share post');
+    }
+  };
+
+  const handleBookmark = async (postId: string, isBookmarked: boolean) => {
+    try {
+      if (isBookmarked) {
+        await postsAPI.unbookmark(postId);
+        toast.success('Removed from bookmarks');
+      } else {
+        await postsAPI.bookmark(postId);
+        toast.success('Added to bookmarks');
+      }
+      setPosts(posts.map(p => {
+        if (p.id === postId) {
+          return { ...p, is_bookmarked: !isBookmarked };
+        }
+        return p;
+      }));
+    } catch (error) {
+      toast.error('Failed to update bookmark');
+    }
+  };
+
+  const handleShare = async (postId: string) => {
+    try {
+      const url = `${window.location.origin}/post/${postId}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    } catch (error) {
+      toast.error('Failed to copy link');
     }
   };
 
@@ -196,8 +224,8 @@ export default function Feed() {
           <article key={post.id} className="p-4 hover:bg-[#181836]/50 transition-colors">
             <div className="flex gap-3">
               {/* Avatar */}
-              <Link href={`/profile/${username}`}>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white font-bold">
+              <Link href={`/profile/${username}`} className="shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
                   {username[0].toUpperCase()}
                 </div>
               </Link>
@@ -295,8 +323,11 @@ export default function Feed() {
                     <span className="text-sm">{post.comments_count || 0}</span>
                   </button>
 
-                  {/* Retweet/Share */}
-                  <button className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group">
+                  {/* Retweet */}
+                  <button 
+                    onClick={() => handleRetweet(post.id)}
+                    className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group"
+                  >
                     <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
                       <Repeat2 className="w-4 h-4" />
                     </div>
@@ -316,6 +347,18 @@ export default function Feed() {
                     <span className="text-sm">{post.likes_count || 0}</span>
                   </button>
 
+                  {/* Bookmark */}
+                  <button 
+                    onClick={() => handleBookmark(post.id, post.is_bookmarked || false)}
+                    className={`flex items-center gap-1 group ${
+                      post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? 'bg-[#1d9bf0]/10' : 'group-hover:bg-[#1d9bf0]/10'}`}>
+                      <Bookmark className={`w-4 h-4 ${post.is_bookmarked ? 'fill-[#1d9bf0]' : ''}`} />
+                    </div>
+                  </button>
+
                   {/* Share */}
                   <button 
                     onClick={() => handleShare(post.id)}
@@ -331,35 +374,43 @@ export default function Feed() {
                 {openComments === post.id && (
                   <div className="mt-3 pt-3 border-t border-[#2f3336]">
                     {/* Add Comment */}
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                        placeholder="Post your reply"
-                        className="flex-1 px-4 py-2 bg-transparent border border-[#2f3336] rounded-full text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
-                      />
-                      <button
-                        onClick={() => handleAddComment(post.id)}
-                        disabled={!newComment.trim()}
-                        className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
-                      >
-                        Reply
-                      </button>
+                    <div className="flex gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                        U
+                      </div>
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          type="text"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Post your reply"
+                          className="flex-1 px-4 py-2 bg-transparent border border-[#2f3336] rounded-full text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
+                        />
+                        <button
+                          onClick={() => handleAddComment(post.id)}
+                          disabled={!newComment.trim()}
+                          className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
+                        >
+                          Reply
+                        </button>
+                      </div>
                     </div>
 
                     {/* Comments List */}
                     {comments.length > 0 ? (
                       <div className="space-y-3">
                         {comments.map((comment) => (
-                          <div key={comment.id} className="flex gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white text-xs font-bold">
-                              {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
-                            </div>
-                            <div className="flex-1">
+                          <div key={comment.id} className="flex gap-3">
+                            <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white text-xs font-bold">
+                                {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
+                              </div>
+                            </Link>
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm">
-                                <span className="font-bold text-white">{comment.profiles?.username || 'user'}</span>
+                                <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="font-bold text-white hover:underline">
+                                  {comment.profiles?.username || 'user'}
+                                </Link>
                                 <span className="text-white ml-2">{comment.content}</span>
                               </p>
                               <p className="text-xs text-[#71767b] mt-0.5">{formatTime(comment.created_at)}</p>

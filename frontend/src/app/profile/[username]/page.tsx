@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { usersAPI, postsAPI } from '@/lib/api';
 import MainLayout from '@/components/MainLayout';
-import { Calendar, MapPin, Link as LinkIcon } from 'lucide-react';
+import { Calendar, MapPin, Link as LinkIcon, ArrowLeft, MoreHorizontal } from 'lucide-react';
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = params?.username as string;
   const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('posts');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     if (username) {
@@ -28,11 +30,9 @@ export default function ProfilePage() {
     setLoading(true);
     setError(false);
     try {
-      // Try to get user profile by username
       const { data: profileData } = await usersAPI.getUserProfile(username);
       setProfile(profileData);
       
-      // Load user posts
       if (profileData?.id) {
         try {
           const { data: postsData } = await postsAPI.getUserPosts(profileData.id);
@@ -49,11 +49,38 @@ export default function ProfilePage() {
     }
   };
 
+  const handleFollow = async () => {
+    // Toggle follow state
+    setIsFollowing(!isFollowing);
+    // TODO: Call API to follow/unfollow
+  };
+
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+
+  const formatJoinDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Check if this is the current user's profile
+  const isOwnProfile = currentUser?.profile?.username === username || 
+                       currentUser?.username === username ||
+                       currentUser?.id === profile?.user_id;
 
   if (loading) {
     return (
@@ -79,15 +106,20 @@ export default function ProfilePage() {
     );
   }
 
-  const isOwnProfile = currentUser?.username === username;
-
   return (
     <MainLayout>
       <div className="max-w-[600px] mx-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 px-4 py-3 border-b border-[#2f3336]">
-          <div className="flex items-center gap-6">
+        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 px-4 py-2 border-b border-[#2f3336] flex items-center gap-6">
+          <button 
+            onClick={() => router.back()}
+            className="p-2 -ml-2 hover:bg-[#181836] rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
             <h1 className="text-xl font-bold text-white">{profile.username}</h1>
+            <p className="text-xs text-[#71767b]">{posts.length} posts</p>
           </div>
         </div>
 
@@ -114,8 +146,15 @@ export default function ProfilePage() {
                   Edit profile
                 </Link>
               ) : (
-                <button className="px-6 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors">
-                  Follow
+                <button 
+                  onClick={handleFollow}
+                  className={`px-6 py-2 font-bold rounded-full transition-colors ${
+                    isFollowing 
+                      ? 'border border-[#2f3336] text-white hover:border-red-500 hover:text-red-500' 
+                      : 'bg-white text-black hover:bg-gray-200'
+                  }`}
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
                 </button>
               )}
             </div>
@@ -136,7 +175,7 @@ export default function ProfilePage() {
             {profile.created_at && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                Joined {formatTime(profile.created_at)}
+                Joined {formatJoinDate(profile.created_at)}
               </span>
             )}
           </div>
