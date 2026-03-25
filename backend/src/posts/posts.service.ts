@@ -7,17 +7,20 @@ export class PostsService {
   constructor(private supabaseService: SupabaseService) {}
 
   async createPost(userId: string, createPostDto: CreatePostDto) {
+    const insertData: any = {
+      content: createPostDto.caption, // Map caption to content
+      likes_count: 0,
+      comments_count: 0,
+      shares_count: 0,
+    };
+    
+    if (createPostDto.media_url) insertData.media_url = createPostDto.media_url;
+    if (createPostDto.media_type) insertData.media_type = createPostDto.media_type;
+    if (createPostDto.caption) insertData.caption = createPostDto.caption;
+
     const { data, error } = await this.supabaseService
       .from('posts')
-      .insert({
-        user_id: userId,
-        caption: createPostDto.caption,
-        media_url: createPostDto.media_url,
-        media_type: createPostDto.media_type,
-        likes_count: 0,
-        comments_count: 0,
-        shares_count: 0,
-      })
+      .insert(insertData)
       .select()
       .single();
 

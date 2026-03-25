@@ -10,19 +10,25 @@ export class CrmService {
 
   // ============ LEADS ============
   async createLead(businessId: string, dto: CreateLeadDto) {
+    const insertData: any = {
+      business_id: businessId,
+      source: dto.source,
+      status: 'new',
+    };
+    
+    // Only add optional fields if they exist
+    if (dto.userId) insertData.user_id = dto.userId;
+
     const { data, error } = await this.supabaseService
       .from('leads')
-      .insert({
-        business_id: businessId,
-        user_id: dto.userId,
-        source: dto.source,
-        status: 'new',
-        notes: dto.notes,
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw new Error('Failed to create lead');
+    if (error) {
+      console.error('Create lead error:', error);
+      throw new Error('Failed to create lead: ' + error.message);
+    }
     return data;
   }
 

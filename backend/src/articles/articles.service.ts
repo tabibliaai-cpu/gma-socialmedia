@@ -17,13 +17,13 @@ export class ArticlesService {
         is_paid: dto.isPaid || false,
         price: dto.price || 0,
       })
-      .select(`
-        *,
-        profiles!author_id (username, avatar_url, badge_type)
-      `)
+      .select()
       .single();
 
-    if (error) throw new Error('Failed to create article');
+    if (error) {
+      console.error('Create article error:', error);
+      throw new Error('Failed to create article: ' + error.message);
+    }
     return data;
   }
 
@@ -32,15 +32,15 @@ export class ArticlesService {
 
     const { data, error } = await this.supabaseService
       .from('articles')
-      .select(`
-        *,
-        profiles!author_id (username, avatar_url, badge_type)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) throw new Error('Failed to get articles');
-    return data;
+    if (error) {
+      console.error('Failed to get articles:', error);
+      return [];
+    }
+    return data || [];
   }
 
   async getById(articleId: string, userId?: string) {

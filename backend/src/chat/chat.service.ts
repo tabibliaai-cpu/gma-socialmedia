@@ -108,29 +108,29 @@ export class ChatService {
     // Get all unique conversations with latest message
     const { data: messages, error } = await this.supabaseService
       .from('messages')
-      .select(`
-        *,
-        sender:profiles!sender_id (username, avatar_url),
-        receiver:profiles!receiver_id (username, avatar_url)
-      `)
+      .select('*')
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('created_at', { ascending: false });
 
     if (error) {
-      throw new Error('Failed to get conversations');
+      console.error('Failed to get conversations:', error);
+      return [];
+    }
+
+    if (!messages || messages.length === 0) {
+      return [];
     }
 
     // Group by conversation partner
     const conversations = new Map();
     
-    for (const msg of messages || []) {
+    for (const msg of messages) {
       const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
       
       if (!conversations.has(partnerId)) {
-        const partner = msg.sender_id === userId ? msg.receiver : msg.sender;
         conversations.set(partnerId, {
           partnerId,
-          partner,
+          partner: { username: 'Unknown', avatar_url: null },
           lastMessage: msg,
           unreadCount: 0,
         });

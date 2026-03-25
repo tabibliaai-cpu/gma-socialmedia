@@ -9,39 +9,43 @@ export class UsersService {
   constructor(private supabaseService: SupabaseService) {}
 
   async getProfile(userId: string) {
-    const { data, error } = await this.supabaseService
+    const { data: user, error } = await this.supabaseService
       .from('users')
-      .select(`
-        id,
-        email,
-        role,
-        created_at,
-        profiles!user_id (
-          username,
-          bio,
-          avatar_url,
-          badge_type,
-          followers_count,
-          following_count
-        ),
-        privacy_settings!user_id (
-          name_visibility,
-          dm_permission,
-          search_visibility
-        ),
-        paid_chat_settings!user_id (
-          price_per_message,
-          is_enabled
-        )
-      `)
+      .select('id, email, role, created_at')
       .eq('id', userId)
       .single();
 
-    if (error) {
+    if (error || !user) {
       throw new NotFoundException('User not found');
     }
 
-    return data;
+    // Get profile separately
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username, bio, avatar_url, badge_type, followers_count, following_count')
+      .eq('user_id', userId)
+      .single();
+
+    // Get privacy settings
+    const { data: privacy } = await this.supabaseService
+      .from('privacy_settings')
+      .select('name_visibility, dm_permission, search_visibility')
+      .eq('user_id', userId)
+      .single();
+
+    // Get paid chat settings
+    const { data: paidChat } = await this.supabaseService
+      .from('paid_chat_settings')
+      .select('price_per_message, is_enabled')
+      .eq('user_id', userId)
+      .single();
+
+    return {
+      ...user,
+      profile: profile || null,
+      privacy_settings: privacy || null,
+      paid_chat_settings: paidChat || null,
+    };
   }
 
   async getPublicProfile(username: string) {

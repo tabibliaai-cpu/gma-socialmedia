@@ -7,23 +7,24 @@ export class AdsService {
   constructor(private supabaseService: SupabaseService) {}
 
   async createAd(ownerId: string, dto: CreateAdDto) {
+    const insertData: any = {
+      creator_id: ownerId,
+      type: dto.type,
+      content: dto.title || '',
+      target_data: { url: dto.targetUrl },
+      budget: dto.budget,
+    };
+
     const { data, error } = await this.supabaseService
       .from('ads')
-      .insert({
-        owner_id: ownerId,
-        type: dto.type,
-        title: dto.title,
-        description: dto.description,
-        media_url: dto.mediaUrl,
-        target_url: dto.targetUrl,
-        budget: dto.budget,
-        targeting: dto.targeting || {},
-        is_active: true,
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw new Error('Failed to create ad');
+    if (error) {
+      console.error('Create ad error:', error);
+      throw new Error('Failed to create ad: ' + error.message);
+    }
     return data;
   }
 
@@ -31,11 +32,14 @@ export class AdsService {
     const { data, error } = await this.supabaseService
       .from('ads')
       .select('*')
-      .eq('owner_id', ownerId)
+      .eq('creator_id', ownerId)
       .order('created_at', { ascending: false });
 
-    if (error) throw new Error('Failed to get ads');
-    return data;
+    if (error) {
+      console.error('Failed to get ads:', error);
+      return [];
+    }
+    return data || [];
   }
 
   async getAd(adId: string) {

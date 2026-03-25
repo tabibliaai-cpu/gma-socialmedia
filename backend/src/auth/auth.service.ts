@@ -122,33 +122,33 @@ export class AuthService {
   async getProfile(userId: string) {
     const { data: user, error } = await this.supabaseService
       .from('users')
-      .select(`
-        id,
-        email,
-        role,
-        created_at,
-        profiles (
-          username,
-          bio,
-          avatar_url,
-          badge_type,
-          followers_count,
-          following_count
-        ),
-        privacy_settings (
-          name_visibility,
-          dm_permission,
-          search_visibility
-        )
-      `)
+      .select('id, email, role, created_at')
       .eq('id', userId)
       .single();
 
-    if (error) {
+    if (error || !user) {
       throw new UnauthorizedException('User not found');
     }
 
-    return user;
+    // Get profile separately
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username, bio, avatar_url, badge_type, followers_count, following_count')
+      .eq('user_id', userId)
+      .single();
+
+    // Get privacy settings
+    const { data: privacy } = await this.supabaseService
+      .from('privacy_settings')
+      .select('name_visibility, dm_permission, search_visibility')
+      .eq('user_id', userId)
+      .single();
+
+    return {
+      ...user,
+      profile: profile || null,
+      privacy_settings: privacy || null,
+    };
   }
 
   async logout(userId: string) {

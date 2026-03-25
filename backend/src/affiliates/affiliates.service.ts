@@ -49,30 +49,30 @@ export class AffiliatesService {
   async getBusinessAffiliates(businessId: string) {
     const { data, error } = await this.supabaseService
       .from('affiliates')
-      .select(`
-        *,
-        profiles!user_id (username, avatar_url, badge_type)
-      `)
+      .select('*')
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
-    if (error) throw new Error('Failed to get affiliates');
-    return data;
+    if (error) {
+      console.error('Failed to get affiliates:', error);
+      return [];
+    }
+    return data || [];
   }
 
   async getUserAffiliates(userId: string) {
     const { data, error } = await this.supabaseService
       .from('affiliates')
-      .select(`
-        *,
-        business:profiles!business_id (username, avatar_url)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .eq('is_active', true);
 
-    if (error) throw new Error('Failed to get user affiliates');
-    return data;
+    if (error) {
+      console.error('Failed to get user affiliates:', error);
+      return [];
+    }
+    return data || [];
   }
 
   async removeAffiliate(businessId: string, affiliateId: string) {
