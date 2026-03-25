@@ -64,7 +64,7 @@ export async function encryptMessage(message: string, key: string): Promise<stri
   const data = encoder.encode(message);
   const keyBytes = encoder.encode(key);
   
-  const encrypted = data.map((byte, i) => byte ^ keyBytes[i % keyBytes.length]);
+  const encrypted = Array.from(data).map((byte, i) => byte ^ keyBytes[i % keyBytes.length]);
   return btoa(String.fromCharCode(...encrypted));
 }
 

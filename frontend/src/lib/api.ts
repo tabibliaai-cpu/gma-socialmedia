@@ -80,6 +80,8 @@ export const chatAPI = {
   getConversations: () => api.get('/chat/conversations'),
   getConversation: (userId: string, page = 1) =>
     api.get(`/chat/conversation/${userId}?page=${page}`),
+  sendMessage: (userId: string, message: string, mediaUrl?: string) =>
+    api.post(`/chat/message`, { receiverId: userId, message, mediaUrl }),
   block: (userId: string) => api.post(`/chat/block/${userId}`),
   nuclearBlock: (userId: string) => api.post(`/chat/nuclear-block/${userId}`),
   unblock: (userId: string) => api.delete(`/chat/block/${userId}`),

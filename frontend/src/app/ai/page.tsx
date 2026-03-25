@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiAPI } from '@/lib/api';
@@ -24,13 +24,13 @@ export default function AIAutomationPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     if (user?.role !== 'business') {
       router.push('/feed');
       return;
     }
     loadAutomations();
-  });
+  }, [user]);
 
   const loadAutomations = async () => {
     try {

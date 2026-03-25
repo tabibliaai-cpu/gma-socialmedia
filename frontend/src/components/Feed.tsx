@@ -80,7 +80,7 @@ export default function Feed() {
   const handleAddComment = async (postId: string) => {
     if (!newComment.trim()) return;
     try {
-      await postsAPI.addComment(postId, { content: newComment });
+      await postsAPI.addComment(postId, newComment);
       setNewComment('');
       loadComments(postId);
       setPosts(posts.map(p => {
