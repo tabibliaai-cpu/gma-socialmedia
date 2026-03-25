@@ -29,13 +29,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('token');
       if (token) {
         setToken(token);
-        const { data } = await authAPI.getProfile();
-        setUser(data);
+        try {
+          const { data } = await authAPI.getProfile();
+          setUser(data);
+        } catch (profileError: any) {
+          // Only clear token on 401 (unauthorized), not on network errors
+          if (profileError?.response?.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+          // For other errors (500, network), keep the token and use cached user
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            try { setUser(JSON.parse(cachedUser)); } catch {}
+          }
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }
@@ -63,16 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoading,
-        login,
-        logout,
-        refreshProfile,
-      }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
