@@ -1,136 +1,154 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/Navbar';
-import CredentialField from '@/components/CredentialField';
-import { Key, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
+import MainLayout from '@/components/MainLayout';
+import { Shield, Smartphone, Key, Check, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useState } from 'react';
 
-export default function SecurityPage() {
-  const { user } = useAuth();
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+export default function TwoFactorPage() {
+  const [enabled, setEnabled] = useState(false);
+  const [step, setStep] = useState(1);
+  const [code] = useState('ABCD-EFGH-IJKL-MNOP');
 
-  const mockApiKey = 'sk_live_' + Math.random().toString(36).substring(2, 15);
-  const mockSecret = 'secret_' + Math.random().toString(36).substring(2, 25);
-  const mockRecoveryCodes = [
-    'ABCD-EFGH-IJKL',
-    'MNOP-QRST-UVWX',
-    'YZ12-3456-7890',
-  ];
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    toast.success('Code copied!');
+  };
 
   return (
-    <div className="min-h-screen bg-dark-300">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-white mb-6 flex items-center">
-          <Shield className="h-6 w-6 mr-2" />
-          Security
-        </h1>
+    <MainLayout>
+      <div className="max-w-2xl mx-auto">
+        <div className="sticky top-0 bg-black z-10 border-b border-[#2f3336] p-4">
+          <h1 className="text-xl font-bold text-white flex items-center">
+            <Shield className="h-6 w-6 mr-2" />
+            Two-Factor Authentication
+          </h1>
+        </div>
 
-        {/* Two-Factor Authentication */}
-        <div className="bg-dark-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <Key className="h-5 w-5 text-primary-400" />
+        <div className="p-4 space-y-6">
+          {/* Info */}
+          <div className="bg-[#16181c] rounded-xl p-6">
+            <div className="flex items-start space-x-4">
+              <div className="p-3 bg-[#1d9bf0]/10 rounded-full">
+                <Shield className="h-8 w-8 text-[#1d9bf0]" />
+              </div>
               <div>
-                <h2 className="font-semibold text-white">Two-Factor Authentication</h2>
-                <p className="text-sm text-gray-400">Add an extra layer of security</p>
+                <h2 className="text-white font-bold text-lg">Protect your account</h2>
+                <p className="text-[#71767b] mt-1">
+                  Two-factor authentication adds an extra layer of security by requiring a code from your authenticator app when you sign in.
+                </p>
               </div>
             </div>
-            <button
-              onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-              className={`w-12 h-6 rounded-full transition-colors ${
-                twoFactorEnabled ? 'bg-green-500' : 'bg-gray-700'
-              }`}
-            >
-              <div className={`h-5 w-5 bg-white rounded-full transform transition-transform ${
-                twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
-              }`} />
-            </button>
           </div>
 
-          {twoFactorEnabled && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              <span className="text-green-400 text-sm">2FA is enabled</span>
-            </div>
-          )}
-        </div>
+          {!enabled ? (
+            <>
+              {/* Step 1 */}
+              {step === 1 && (
+                <div className="bg-[#16181c] rounded-xl p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-[#1d9bf0] rounded-full flex items-center justify-center text-white font-bold">1</div>
+                    <h3 className="text-white font-semibold">Download an authenticator app</h3>
+                  </div>
+                  <p className="text-[#71767b] mb-4">
+                    Install Google Authenticator, Authy, or similar app on your phone.
+                  </p>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="px-6 py-2 bg-[#1d9bf0] text-white rounded-full hover:bg-[#1a8cd8]"
+                  >
+                    I have an authenticator app
+                  </button>
+                </div>
+              )}
 
-        {/* API Keys */}
-        <div className="bg-dark-200 rounded-xl p-4 mb-6">
-          <h2 className="font-semibold text-white mb-4">API Keys</h2>
-          <div className="space-y-4">
-            <CredentialField
-              label="Public Key"
-              value={mockApiKey}
-              isSecret={false}
-            />
-            <CredentialField
-              label="Secret Key"
-              value={mockSecret}
-              isSecret={true}
-              showRegenerate
-              onRegenerate={() => toast.success('New secret key generated')}
-            />
-          </div>
-          <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <p className="text-yellow-400 text-sm">
-                Never share your secret key. Regenerate it immediately if you suspect it's been compromised.
-              </p>
-            </div>
-          </div>
-        </div>
+              {/* Step 2 */}
+              {step === 2 && (
+                <div className="bg-[#16181c] rounded-xl p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-[#1d9bf0] rounded-full flex items-center justify-center text-white font-bold">2</div>
+                    <h3 className="text-white font-semibold">Scan QR code or enter code</h3>
+                  </div>
+                  
+                  {/* Mock QR Code */}
+                  <div className="bg-white p-4 rounded-xl w-fit mx-auto mb-4">
+                    <div className="w-32 h-32 bg-[#16181c] flex items-center justify-center">
+                      <Key className="h-12 w-12 text-white" />
+                    </div>
+                  </div>
 
-        {/* Recovery Codes */}
-        <div className="bg-dark-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">Recovery Codes</h2>
-            <button
-              onClick={() => setShowRecoveryCodes(!showRecoveryCodes)}
-              className="text-sm text-primary-400 hover:text-primary-300"
-            >
-              {showRecoveryCodes ? 'Hide' : 'Show'} Codes
-            </button>
-          </div>
+                  <p className="text-[#71767b] text-center mb-2">Or enter this code manually:</p>
+                  
+                  <div className="flex items-center justify-center space-x-2 bg-black p-3 rounded-lg">
+                    <code className="text-white font-mono">{code}</code>
+                    <button onClick={handleCopy} className="text-[#1d9bf0] hover:text-[#1a8cd8]">
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
 
-          {showRecoveryCodes && (
-            <div className="space-y-2">
-              {mockRecoveryCodes.map((code, i) => (
-                <code key={i} className="block bg-dark-300 px-3 py-2 rounded text-sm text-gray-300 font-mono">
-                  {code}
-                </code>
-              ))}
-              <p className="text-xs text-gray-500 mt-2">
-                Store these codes safely. They can be used to access your account if you lose 2FA.
-              </p>
-            </div>
-          )}
-        </div>
+                  <button
+                    onClick={() => setStep(3)}
+                    className="w-full mt-6 py-3 bg-[#1d9bf0] text-white rounded-full hover:bg-[#1a8cd8]"
+                  >
+                    Continue
+                  </button>
+                </div>
+              )}
 
-        {/* Sessions */}
-        <div className="bg-dark-200 rounded-xl p-4">
-          <h2 className="font-semibold text-white mb-4">Active Sessions</h2>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-dark-300 rounded-lg">
-              <div>
-                <p className="text-white text-sm">Current Session</p>
-                <p className="text-xs text-gray-500">Chrome on Windows • Active now</p>
+              {/* Step 3 */}
+              {step === 3 && (
+                <div className="bg-[#16181c] rounded-xl p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-[#1d9bf0] rounded-full flex items-center justify-center text-white font-bold">3</div>
+                    <h3 className="text-white font-semibold">Verify code</h3>
+                  </div>
+                  
+                  <p className="text-[#71767b] mb-4">
+                    Enter the 6-digit code from your authenticator app:
+                  </p>
+
+                  <div className="flex justify-center space-x-2 mb-6">
+                    {[1,2,3,4,5,6].map((i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        maxLength={1}
+                        className="w-12 h-14 bg-black border border-[#2f3336] rounded-lg text-white text-center text-xl font-bold focus:border-[#1d9bf0] focus:outline-none"
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEnabled(true);
+                      toast.success('Two-factor authentication enabled!');
+                    }}
+                    className="w-full py-3 bg-[#1d9bf0] text-white rounded-full hover:bg-[#1a8cd8]"
+                  >
+                    Verify & Enable
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-[#16181c] rounded-xl p-6">
+              <div className="flex items-center space-x-3 text-green-500 mb-4">
+                <Check className="h-6 w-6" />
+                <span className="font-semibold">Two-factor authentication is enabled</span>
               </div>
-              <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
-                Current
-              </span>
+              <p className="text-[#71767b] mb-4">
+                Your account is protected with two-factor authentication.
+              </p>
+              <button
+                onClick={() => setEnabled(false)}
+                className="px-6 py-2 bg-red-500/10 text-red-400 rounded-full hover:bg-red-500/20"
+              >
+                Disable 2FA
+              </button>
             </div>
-          </div>
-          <button className="w-full mt-4 py-2 text-red-400 hover:text-red-300 text-sm">
-            Sign out all other sessions
-          </button>
+          )}
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

@@ -15,16 +15,28 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setMounted(true);
   }, []);
 
-  const navItems = [
-    { href: '/feed', label: 'Home', icon: 'home' },
-    { href: '/explore', label: 'Explore', icon: 'search' },
-    { href: '/notifications', label: 'Notifications', icon: 'bell' },
-    { href: '/chat', label: 'Messages', icon: 'mail' },
-    { href: '/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
-    { href: '/crm', label: 'CRM', icon: 'briefcase' },
-    { href: '/creator', label: 'Creator', icon: 'star' },
-    { href: '/settings', label: 'Settings', icon: 'settings' },
-  ];
+  // Filter nav items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { href: '/feed', label: 'Home', icon: 'home' },
+      { href: '/explore', label: 'Explore', icon: 'search' },
+      { href: '/notifications', label: 'Notifications', icon: 'bell' },
+      { href: '/chat', label: 'Messages', icon: 'mail' },
+      { href: '/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
+    ];
+    
+    // Add CRM only for business accounts
+    if (user?.role === 'business') {
+      baseItems.push({ href: '/crm', label: 'CRM', icon: 'briefcase' });
+    }
+    
+    baseItems.push({ href: '/creator', label: 'Creator', icon: 'star' });
+    baseItems.push({ href: '/settings', label: 'Settings', icon: 'settings' });
+    
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const isActive = (href: string) => {
     if (href === '/feed') return pathname === '/feed' || pathname === '/';
@@ -32,7 +44,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   const getIcon = (icon: string, filled: boolean = false) => {
-    const className = 'w-[26px] h-[26px]';
+    const className = 'w-6 h-6 md:w-[26px] md:h-[26px]';
     switch (icon) {
       case 'home':
         return filled ? (
@@ -101,7 +113,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         return (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
         );
       default:
@@ -125,8 +137,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-black flex">
-      {/* Left Sidebar */}
-      <aside className="w-[275px] shrink-0 h-screen sticky top-0 flex flex-col justify-between py-2 px-2 xl:px-4">
+      {/* Left Sidebar - Desktop */}
+      <aside className="hidden md:flex w-[275px] shrink-0 h-screen sticky top-0 flex-col justify-between py-2 px-2 xl:px-4">
         <div>
           {/* Logo */}
           <Link href="/feed" className="inline-flex items-center justify-center w-[52px] h-[52px] rounded-full hover:bg-[#181836] transition-colors mb-1">
@@ -140,15 +152,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-5 px-3 py-3 rounded-full transition-colors ${
-                  isActive(item.href)
-                    ? 'font-bold'
-                    : 'hover:bg-[#181836]'
+                  isActive(item.href) ? 'font-bold' : 'hover:bg-[#181836]'
                 }`}
               >
-                <span className={isActive(item.href) ? 'text-white' : 'text-white'}>
+                <span className="text-white">
                   {getIcon(item.icon, isActive(item.href))}
                 </span>
-                <span className={`text-xl ${isActive(item.href) ? 'text-white' : 'text-white'}`}>
+                <span className="text-xl text-white hidden xl:block">
                   {item.label}
                 </span>
               </Link>
@@ -160,7 +170,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             onClick={() => router.push('/create/post')}
             className="mt-4 w-[90%] mx-auto flex items-center justify-center py-3 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full transition-colors text-base"
           >
-            Post
+            <span className="hidden xl:inline">Post</span>
+            <svg className="w-6 h-6 xl:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
           </button>
         </div>
 
@@ -174,22 +187,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <p className="font-bold text-white text-sm truncate">{user?.username}</p>
               <p className="text-[#71767b] text-sm truncate">@{user?.username}</p>
             </div>
-            <svg className="w-5 h-5 text-[#71767b] hidden xl:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
-            </svg>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 border-x border-[#2f3336]">
+      <main className="flex-1 min-w-0 border-x border-[#2f3336] pb-16 md:pb-0">
         {children}
       </main>
 
-      {/* Right Sidebar */}
-      <aside className="w-[350px] shrink-0 h-screen sticky top-0 overflow-y-auto py-2 px-6 hidden xl:block">
+      {/* Right Sidebar - Desktop */}
+      <aside className="hidden lg:flex w-[300px] xl:w-[350px] shrink-0 h-screen sticky top-0 overflow-y-auto py-2 px-4 xl:px-6">
         {/* Search */}
-        <div className="sticky top-0 bg-black pb-3">
+        <div className="sticky top-0 bg-black pb-3 w-full">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71767b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -203,7 +213,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Premium Card */}
-        <div className="bg-[#16181c] rounded-2xl p-4 mb-4">
+        <div className="bg-[#16181c] rounded-2xl p-4 mb-4 w-full">
           <h2 className="text-xl font-bold text-white mb-2">Subscribe to Premium</h2>
           <p className="text-sm text-white mb-4">Subscribe to unlock new features and get a verified badge.</p>
           <button className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full transition-colors">
@@ -212,7 +222,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Trending */}
-        <div className="bg-[#16181c] rounded-2xl overflow-hidden">
+        <div className="bg-[#16181c] rounded-2xl overflow-hidden w-full">
           <h2 className="text-xl font-bold text-white p-4 pb-2">What's happening</h2>
           {[
             { category: 'Technology', tag: '#AIRevolution', posts: '45.2K' },
@@ -230,6 +240,40 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </button>
         </div>
       </aside>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#2f3336] md:hidden z-50">
+        <div className="flex justify-around items-center py-2">
+          {navItems.slice(0, 5).map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center p-2 ${
+                isActive(item.href) ? 'text-white' : 'text-[#71767b]'
+              }`}
+            >
+              {getIcon(item.icon, isActive(item.href))}
+            </Link>
+          ))}
+          {/* More menu for mobile */}
+          <button 
+            onClick={() => router.push('/settings')}
+            className="flex flex-col items-center p-2 text-[#71767b]"
+          >
+            {getIcon('settings', false)}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile FAB */}
+      <button
+        onClick={() => router.push('/create/post')}
+        className="fixed bottom-20 right-4 md:hidden w-14 h-14 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full shadow-lg flex items-center justify-center z-40"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
     </div>
   );
 }

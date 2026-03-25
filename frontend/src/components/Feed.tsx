@@ -10,10 +10,12 @@ interface Post {
   id: string;
   user_id: string;
   caption: string;
+  content?: string;
   media_url: string;
   media_type: string;
   likes_count: number;
   comments_count: number;
+  shares_count: number;
   created_at: string;
   is_liked?: boolean;
   is_ad?: boolean;
@@ -57,7 +59,7 @@ export default function Feed() {
         if (p.id === postId) {
           return {
             ...p,
-            likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1,
+            likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1,
             is_liked: !isLiked,
           };
         }
@@ -65,6 +67,25 @@ export default function Feed() {
       }));
     } catch (error) {
       toast.error('Failed to like post');
+    }
+  };
+
+  const handleShare = async (postId: string) => {
+    try {
+      // Copy link to clipboard
+      const url = `${window.location.origin}/post/${postId}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+      
+      // Update share count
+      setPosts(posts.map(p => {
+        if (p.id === postId) {
+          return { ...p, shares_count: (p.shares_count || 0) + 1 };
+        }
+        return p;
+      }));
+    } catch (error) {
+      toast.error('Failed to share post');
     }
   };
 
@@ -96,6 +117,8 @@ export default function Feed() {
   };
 
   const formatTime = (dateString: string) => {
+    if (!dateString) return 'now';
+    
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -113,7 +136,7 @@ export default function Feed() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div>
       </div>
     );
   }
@@ -121,25 +144,26 @@ export default function Feed() {
   if (posts.length === 0) {
     return (
       <div className="text-center py-20">
-        <p className="text-dark-500 text-lg">No posts yet</p>
-        <p className="text-dark-400 text-sm mt-2">Follow some people to see their posts here</p>
+        <p className="text-[#71767b] text-lg">No posts yet</p>
+        <p className="text-[#71767b] text-sm mt-2">Create your first post to get started!</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-dark-100">
+    <div className="divide-y divide-[#2f3336]">
       {posts.map((post) => {
         const profile = post.profiles;
         const username = profile?.username || 'user';
         const isVerified = profile?.badge_type && profile.badge_type !== 'none';
+        const content = post.caption || post.content || '';
 
         return (
-          <article key={post.id} className="p-4 hover:bg-dark-50/50 transition-colors cursor-pointer">
+          <article key={post.id} className="p-4 hover:bg-[#181836]/50 transition-colors">
             <div className="flex gap-3">
               {/* Avatar */}
               <Link href={`/profile/${username}`}>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white font-bold">
                   {username[0].toUpperCase()}
                 </div>
               </Link>
@@ -147,29 +171,29 @@ export default function Feed() {
               {/* Content */}
               <div className="flex-1 min-w-0">
                 {/* Header */}
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1 text-sm flex-wrap">
                   <Link href={`/profile/${username}`} className="font-bold text-white hover:underline">
                     {username}
                   </Link>
                   {isVerified && (
-                    <Verified className="w-4 h-4 text-primary fill-primary" />
+                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
                   )}
-                  <span className="text-dark-500">@{username}</span>
-                  <span className="text-dark-500">·</span>
-                  <span className="text-dark-500">{formatTime(post.created_at)}</span>
-                  <button className="ml-auto p-1.5 text-dark-500 hover:bg-primary/10 hover:text-primary rounded-full transition-colors">
+                  <span className="text-[#71767b]">@{username}</span>
+                  <span className="text-[#71767b]">·</span>
+                  <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
+                  <button className="ml-auto p-1.5 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full transition-colors">
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Caption */}
                 <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
-                  {post.caption}
+                  {content}
                 </p>
 
                 {/* Media */}
                 {post.media_url && (
-                  <div className="mt-3 rounded-2xl overflow-hidden border border-dark-100">
+                  <div className="mt-3 rounded-2xl overflow-hidden border border-[#2f3336]">
                     {post.media_type === 'video' ? (
                       <video src={post.media_url} controls className="w-full max-h-96 object-cover" />
                     ) : (
@@ -186,38 +210,41 @@ export default function Feed() {
                       setOpenComments(openComments === post.id ? null : post.id);
                       if (openComments !== post.id) loadComments(post.id);
                     }}
-                    className="flex items-center gap-1 text-dark-500 hover:text-primary group"
+                    className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
                   >
-                    <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
+                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
                       <MessageCircle className="w-4 h-4" />
                     </div>
                     <span className="text-sm">{post.comments_count || 0}</span>
                   </button>
 
-                  {/* Retweet */}
-                  <button className="flex items-center gap-1 text-dark-500 hover:text-success group">
-                    <div className="p-2 rounded-full group-hover:bg-success/10 transition-colors">
+                  {/* Retweet/Share */}
+                  <button className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group">
+                    <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
                       <Repeat2 className="w-4 h-4" />
                     </div>
-                    <span className="text-sm">0</span>
+                    <span className="text-sm">{post.shares_count || 0}</span>
                   </button>
 
                   {/* Like */}
                   <button
                     onClick={() => handleLike(post.id, post.is_liked || false)}
                     className={`flex items-center gap-1 group ${
-                      post.is_liked ? 'text-danger' : 'text-dark-500 hover:text-danger'
+                      post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
                     }`}
                   >
-                    <div className={`p-2 rounded-full transition-colors ${post.is_liked ? 'bg-danger/10' : 'group-hover:bg-danger/10'}`}>
-                      <Heart className={`w-4 h-4 ${post.is_liked ? 'fill-danger' : ''}`} />
+                    <div className={`p-2 rounded-full transition-colors ${post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'}`}>
+                      <Heart className={`w-4 h-4 ${post.is_liked ? 'fill-pink-500' : ''}`} />
                     </div>
                     <span className="text-sm">{post.likes_count || 0}</span>
                   </button>
 
                   {/* Share */}
-                  <button className="flex items-center gap-1 text-dark-500 hover:text-primary group">
-                    <div className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
+                  <button 
+                    onClick={() => handleShare(post.id)}
+                    className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
+                  >
+                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
                       <Share className="w-4 h-4" />
                     </div>
                   </button>
@@ -225,7 +252,7 @@ export default function Feed() {
 
                 {/* Comments Section */}
                 {openComments === post.id && (
-                  <div className="mt-3 pt-3 border-t border-dark-100 animate-fade-in">
+                  <div className="mt-3 pt-3 border-t border-[#2f3336]">
                     {/* Add Comment */}
                     <div className="flex gap-2 mb-3">
                       <input
@@ -234,12 +261,12 @@ export default function Feed() {
                         onChange={(e) => setNewComment(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
                         placeholder="Post your reply"
-                        className="flex-1 px-4 py-2 bg-dark-100 border border-dark-200 rounded-full text-white text-sm placeholder-dark-500 focus:outline-none focus:border-primary transition-colors"
+                        className="flex-1 px-4 py-2 bg-transparent border border-[#2f3336] rounded-full text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
                       />
                       <button
                         onClick={() => handleAddComment(post.id)}
                         disabled={!newComment.trim()}
-                        className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
+                        className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
                       >
                         Reply
                       </button>
@@ -250,21 +277,21 @@ export default function Feed() {
                       <div className="space-y-3">
                         {comments.map((comment) => (
                           <div key={comment.id} className="flex gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white text-xs font-bold">
                               {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
                             </div>
                             <div className="flex-1">
                               <p className="text-sm">
                                 <span className="font-bold text-white">{comment.profiles?.username || 'user'}</span>
-                                <span className="text-dark-500 ml-1">{comment.content}</span>
+                                <span className="text-white ml-2">{comment.content}</span>
                               </p>
-                              <p className="text-xs text-dark-500 mt-0.5">{formatTime(comment.created_at)}</p>
+                              <p className="text-xs text-[#71767b] mt-0.5">{formatTime(comment.created_at)}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-dark-500 text-sm text-center py-4">No comments yet</p>
+                      <p className="text-[#71767b] text-sm text-center py-4">No comments yet. Be the first to comment!</p>
                     )}
                   </div>
                 )}
