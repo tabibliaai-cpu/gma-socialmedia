@@ -1,80 +1,138 @@
-export default function PrivacyPage() {
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { usersAPI } from '@/lib/api';
+import Navbar from '@/components/Navbar';
+import toast from 'react-hot-toast';
+import { Shield, Eye, MessageSquare, Search, Lock } from 'lucide-react';
+
+export default function PrivacySettingsPage() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  
+  const [privacy, setPrivacy] = useState({
+    name_visibility: 'everyone',
+    dm_permission: 'everyone',
+    search_visibility: 'both'
+  });
+
+  useEffect(() => {
+    const loadPrivacySettings = async () => {
+      try {
+        const { data } = await usersAPI.getProfile(); // Assumes getProfile returns user.privacy_settings
+        if (data?.privacy_settings) {
+          setPrivacy({
+            name_visibility: data.privacy_settings.name_visibility || 'everyone',
+            dm_permission: data.privacy_settings.dm_permission || 'everyone',
+            search_visibility: data.privacy_settings.search_visibility || 'both'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setFetching(false);
+      }
+    };
+    if (user) loadPrivacySettings();
+  }, [user]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await usersAPI.updatePrivacy(privacy);
+      toast.success('Privacy settings saved!');
+    } catch (error) {
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#1d9bf0]"></div></div>;
+
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
-        <p className="text-[#71767b] mb-8">Last updated: March 2026</p>
-        
-        <div className="space-y-6 text-[#e7e9ea]">
-          <section>
-            <h2 className="text-xl font-bold mb-3">1. Information We Collect</h2>
-            <p>We collect information you provide directly to us, such as when you create an account, post content, or contact us for support. This includes:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-[#71767b]">
-              <li>Account information (username, email, password)</li>
-              <li>Profile information (name, bio, photo)</li>
-              <li>Content you post or upload</li>
-              <li>Communications with us</li>
-            </ul>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">2. How We Use Your Information</h2>
-            <p>We use the information we collect to:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-[#71767b]">
-              <li>Provide, maintain, and improve our services</li>
-              <li>Process transactions and send related information</li>
-              <li>Send technical notices and support messages</li>
-              <li>Respond to your comments and questions</li>
-              <li>Monitor and analyze trends and usage</li>
-            </ul>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">3. Information Sharing</h2>
-            <p>We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy or as required by law.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">4. Data Security</h2>
-            <p>We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">5. Your Rights</h2>
-            <p>You have the right to:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-[#71767b]">
-              <li>Access your personal data</li>
-              <li>Correct inaccurate data</li>
-              <li>Request deletion of your data</li>
-              <li>Object to processing of your data</li>
-              <li>Data portability</li>
-            </ul>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">6. Cookies</h2>
-            <p>We use cookies and similar technologies to provide, protect, and improve our services. You can control cookies through your browser settings.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">7. Third-Party Services</h2>
-            <p>Our service may contain links to third-party websites. We are not responsible for the privacy practices of these sites. We encourage you to read their privacy policies.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">8. Children's Privacy</h2>
-            <p>Our service is not intended for children under 13. We do not knowingly collect personal information from children under 13.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">9. Changes to This Policy</h2>
-            <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new privacy policy on this page and updating the "Last updated" date.</p>
-          </section>
-          
-          <section>
-            <h2 className="text-xl font-bold mb-3">10. Contact Us</h2>
-            <p>If you have questions about this Privacy Policy, please contact us at privacy@gpm.social</p>
-          </section>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="flex items-center space-x-3 mb-8 border-b border-[#2f3336] pb-4">
+          <Shield className="w-8 h-8 text-[#1d9bf0]" />
+          <div>
+            <h1 className="text-2xl font-bold text-white">Privacy Controls</h1>
+            <p className="text-[#71767b]">Manage who can see your information and contact you.</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Name Visibility Control */}
+          <div className="bg-[#151515] border border-[#2f3336] rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Eye className="w-5 h-5 text-gray-400" />
+              <div>
+                <h3 className="text-lg font-bold text-white">Real Name Visibility</h3>
+                <p className="text-sm text-[#71767b]">Control who can see your real name. If hidden, only your @username is shown.</p>
+              </div>
+            </div>
+            <select
+              value={privacy.name_visibility}
+              onChange={(e) => setPrivacy({ ...privacy, name_visibility: e.target.value })}
+              className="w-full bg-black border border-[#2f3336] text-white rounded-lg px-4 py-3 focus:border-[#1d9bf0] focus:outline-none"
+            >
+              <option value="everyone">Everyone</option>
+              <option value="selected">Selected Users (Followers)</option>
+              <option value="none">No One (Hidden)</option>
+            </select>
+          </div>
+
+          {/* DM Permission Control */}
+          <div className="bg-[#151515] border border-[#2f3336] rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <MessageSquare className="w-5 h-5 text-gray-400" />
+              <div>
+                <h3 className="text-lg font-bold text-white">Direct Messages (DM)</h3>
+                <p className="text-sm text-[#71767b]">Choose who is allowed to send you direct messages.</p>
+              </div>
+            </div>
+            <select
+              value={privacy.dm_permission}
+              onChange={(e) => setPrivacy({ ...privacy, dm_permission: e.target.value })}
+              className="w-full bg-black border border-[#2f3336] text-white rounded-lg px-4 py-3 focus:border-[#1d9bf0] focus:outline-none"
+            >
+              <option value="everyone">Everyone</option>
+              <option value="selected">Selected Users</option>
+              <option value="none">No One</option>
+            </select>
+          </div>
+
+          {/* Search Visibility Control */}
+          <div className="bg-[#151515] border border-[#2f3336] rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Search className="w-5 h-5 text-gray-400" />
+              <div>
+                <h3 className="text-lg font-bold text-white">Search Visibility</h3>
+                <p className="text-sm text-[#71767b]">Control how people can find your profile in the search system.</p>
+              </div>
+            </div>
+            <select
+              value={privacy.search_visibility}
+              onChange={(e) => setPrivacy({ ...privacy, search_visibility: e.target.value })}
+              className="w-full bg-black border border-[#2f3336] text-white rounded-lg px-4 py-3 focus:border-[#1d9bf0] focus:outline-none"
+            >
+              <option value="both">Searchable by Username & Profile Name</option>
+              <option value="username">Searchable by Username only</option>
+              <option value="name">Searchable by Profile Name only</option>
+              <option value="hidden">Hidden from Search completely</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="w-full py-4 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : <><Lock className="w-5 h-5" /> Save Privacy Settings</>}
+          </button>
         </div>
       </div>
     </div>
