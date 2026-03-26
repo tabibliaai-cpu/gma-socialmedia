@@ -76,7 +76,6 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   };
 
   const handleLike = async (postId: string, isLiked: boolean) => {
-    // Optimistic update with animation
     setAnimatingPost(postId);
     setTimeout(() => setAnimatingPost(null), 500);
     
@@ -98,7 +97,6 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
         await postsAPI.like(postId);
       }
     } catch (error) {
-      // Revert on error
       setPosts(posts.map(p => {
         if (p.id === postId) {
           return {
@@ -298,12 +296,16 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                     {username}
                   </Link>
                   
-                  {/* Master Plan: Subscription Badges */}
+                  {/* Master Plan: Subscription Badges (Wrapped in Span to fix TypeScript) */}
                   {isPremium && (
-                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" title="Premium Verified" />
+                    <span title="Premium Verified" className="inline-flex">
+                      <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
+                    </span>
                   )}
                   {isBusiness && (
-                    <Verified className="w-4 h-4 text-[#ffd700] fill-[#ffd700]" title="Business Verified" />
+                    <span title="Business Verified" className="inline-flex">
+                      <Verified className="w-4 h-4 text-[#ffd700] fill-[#ffd700]" />
+                    </span>
                   )}
                   {isVerified && !isPremium && !isBusiness && (
                     <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
