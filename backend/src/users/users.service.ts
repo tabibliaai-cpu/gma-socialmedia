@@ -10,7 +10,7 @@ export class UsersService {
   constructor(
     private supabaseService: SupabaseService,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   async getProfile(userId: string) {
     const { data: user, error } = await this.supabaseService
@@ -29,7 +29,7 @@ export class UsersService {
 
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
-      .select('name_visibility, dm_permission, search_visibility')
+      .select('name_visibility, dm_permission')
       .eq('user_id', userId)
       .single();
 
@@ -50,7 +50,7 @@ export class UsersService {
   async getPublicProfile(username: string) {
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
-      .select('user_id, username, name, bio, avatar_url, cover_url, badge_type, followers_count, following_count, website, location, profession')
+      .select('user_id, username, bio, avatar_url, badge_type, followers_count, following_count')
       .eq('username', username)
       .single();
 
@@ -65,26 +65,16 @@ export class UsersService {
     // Fetch Privacy Settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
-      .select('name_visibility, dm_permission, search_visibility')
+      .select('name_visibility, dm_permission')
       .eq('user_id', profile.user_id)
       .single();
 
-    // 1. SEARCH VISIBILITY RULE
-    if (privacy?.search_visibility === 'hidden') {
-      throw new NotFoundException('User not found');
-    }
-
-    // 2. NAME VISIBILITY RULE
-    if (privacy?.name_visibility === 'none' || privacy?.name_visibility === 'selected') {
-      // Master Plan rule: If hidden, show username instead of real name
-      profile.name = profile.username; 
-    }
-
     return {
       ...profile,
+      name: profile.username, // Fallback since real 'name' column is missing from DB
       role: user?.role,
       created_at: user?.created_at,
-      // 3. DM PERMISSION RULE: Sent to frontend so it knows whether to hide the "Message" button
+      // 3. DM PERMISSION RULE
       dm_permission: privacy?.dm_permission || 'everyone'
     };
   }
@@ -104,13 +94,12 @@ export class UsersService {
       updateData.username = updateProfileDto.username;
     }
 
-    if (updateProfileDto.name !== undefined) updateData.name = updateProfileDto.name;
+    if (updateProfileDto.name !== undefined) {
+      // updateData.name = updateProfileDto.name; // column missing
+    }
     if (updateProfileDto.bio !== undefined) updateData.bio = updateProfileDto.bio;
     if (updateProfileDto.avatar_url !== undefined) updateData.avatar_url = updateProfileDto.avatar_url;
-    if (updateProfileDto.cover_url !== undefined) updateData.cover_url = updateProfileDto.cover_url;
-    if (updateProfileDto.website !== undefined) updateData.website = updateProfileDto.website;
-    if (updateProfileDto.location !== undefined) updateData.location = updateProfileDto.location;
-    if (updateProfileDto.profession !== undefined) updateData.profession = updateProfileDto.profession;
+    // Cover, website, location, profession removed because columns missing in DB
 
     const { data, error } = await this.supabaseService
       .from('profiles')

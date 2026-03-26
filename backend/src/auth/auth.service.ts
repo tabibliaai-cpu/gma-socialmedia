@@ -10,7 +10,7 @@ export class AuthService {
   constructor(
     private supabaseService: SupabaseService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, password, role = 'user', username } = registerDto;
@@ -149,7 +149,7 @@ export class AuthService {
     // Get privacy settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
-      .select('name_visibility, dm_permission, search_visibility')
+      .select('name_visibility, dm_permission')
       .eq('user_id', userId)
       .single();
 
@@ -176,7 +176,7 @@ export class AuthService {
 
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
-    
+
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
