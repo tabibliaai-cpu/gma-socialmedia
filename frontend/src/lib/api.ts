@@ -48,14 +48,16 @@ export const authAPI = {
 export const usersAPI = {
   getProfile: () => api.get('/users/profile'),
   getPublicProfile: (username: string) => api.get(`/users/${username}`),
+  getUserProfile: (username: string) => api.get(`/users/${username}`), // Kept just in case other components use it
   updateProfile: (data: any) => api.put('/users/profile', data),
-  
-  // ADD THIS LINE:
   updatePrivacy: (data: any) => api.put('/users/privacy', data),
-  
   follow: (userId: string) => api.post(`/users/follow/${userId}`),
   unfollow: (userId: string) => api.post(`/users/unfollow/${userId}`),
   checkFollow: (userId: string) => api.get(`/users/check-follow/${userId}`),
+  getFollowers: (username: string) => api.get(`/users/${username}/followers`),
+  getFollowing: (username: string) => api.get(`/users/${username}/following`),
+  createShareLink: () => api.post('/users/share-link'),
+  getSharedProfile: (token: string) => api.get(`/users/shared/${token}`),
 };
 
 // Posts API
