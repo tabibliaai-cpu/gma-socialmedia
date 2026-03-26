@@ -4,38 +4,47 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usersAPI, postsAPI } from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import { MapPin, Link as LinkIcon, Calendar, MessageCircle, UserPlus, UserMinus, Share2, Verified, QrCode } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, MessageCircle, Share2, Verified, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
-export default function ProfilePage({ params }: { params: { username: string } }) {
+export default function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const params = useParams(); // Using safe hook for Next.js routing
+  const targetUsername = params?.username as string;
+  
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
 
   useEffect(() => {
-    loadProfileAndPosts();
-  }, [params.username]);
+    if (targetUsername) {
+      loadProfileAndPosts();
+    }
+  }, [targetUsername, user?.id]); // Re-run if user context loads late
 
   const loadProfileAndPosts = async () => {
     try {
       // 1. Load Profile
-      const { data: profileData } = await usersAPI.getPublicProfile(params.username);
+      const { data: profileData } = await usersAPI.getPublicProfile(targetUsername);
       setProfile(profileData);
 
       // 2. Check Follow Status
       if (user && user.id !== profileData.user_id) {
-        const { data: followData } = await usersAPI.checkFollow(profileData.user_id);
-        setIsFollowing(followData.isFollowing);
+        try {
+          const { data: followData } = await usersAPI.checkFollow(profileData.user_id);
+          setIsFollowing(followData.isFollowing);
+        } catch (e) {
+          console.log("Follow check skipped");
+        }
       }
 
       // 3. Load User's Timeline Posts
-      // Note: Assumes postsAPI has a getUserPosts method. If not, this can just call getFeed.
       try {
         const { data: userPosts } = await postsAPI.getUserPosts(profileData.user_id);
         setPosts(userPosts || []);
@@ -44,9 +53,10 @@ export default function ProfilePage({ params }: { params: { username: string } }
       }
 
     } catch (error: any) {
+      console.error("Profile load error:", error);
+      setError(true);
       if (error.response?.status === 404) {
         toast.error('User not found or profile is hidden.');
-        router.push('/feed');
       }
     } finally {
       setLoading(false);
@@ -58,7 +68,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
     try {
       if (isFollowing) {
         await usersAPI.unfollow(profile.user_id);
-        setProfile({ ...profile, followers_count: profile.followers_count - 1 });
+        setProfile({ ...profile, followers_count: Math.max(0, profile.followers_count - 1) });
       } else {
         await usersAPI.follow(profile.user_id);
         setProfile({ ...profile, followers_count: profile.followers_count + 1 });
@@ -69,7 +79,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
     }
   };
 
-  // MASTER PLAN 1.8: Expiring Profile Sharing
   const handleGenerateShareLink = async () => {
     setGeneratingLink(true);
     try {
@@ -86,16 +95,24 @@ export default function ProfilePage({ params }: { params: { username: string } }
 
   const startChat = () => {
     if (!user) return toast.error('Please login to chat');
-    // Navigate to chat system with this user's ID
     router.push(`/chat/new?userId=${profile.user_id}`);
   };
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#1d9bf0]"></div></div>;
-  if (!profile) return null;
+  
+  // Safe Fallback if the profile couldn't load
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        <Navbar />
+        <h1 className="text-2xl text-white font-bold mb-4">Profile Not Found</h1>
+        <p className="text-[#71767b] mb-6">This account doesn't exist or is currently hidden.</p>
+        <Link href="/feed" className="px-6 py-2 bg-[#1d9bf0] text-white font-bold rounded-full">Go to Feed</Link>
+      </div>
+    );
+  }
 
   const isOwnProfile = user?.id === profile.user_id;
-  
-  // MASTER PLAN 1.5: DM Permission Logic
   const canMessage = 
     profile.dm_permission === 'everyone' || 
     (profile.dm_permission === 'selected' && isFollowing) || 
@@ -118,7 +135,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                profile.username[0].toUpperCase()
+                profile.username?.charAt(0)?.toUpperCase() || 'U' // Extremely safe fallback
               )}
             </div>
 
@@ -140,7 +157,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
                 </>
               ) : (
                 <>
-                  {/* MASTER PLAN 1.5: Hidden if restricted */}
                   {canMessage && (
                     <button 
                       onClick={startChat}
@@ -166,12 +182,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
 
           <div className="mt-3">
             <h1 className="text-xl font-bold text-white flex items-center gap-1">
-              {/* MASTER PLAN 1.4: Name Visibility (Backend already handles replacing this with username if hidden) */}
-              {profile.name || profile.username}
+              {profile.name || profile.username || 'User'}
               {profile.badge_type === 'premium' && <Verified className="w-5 h-5 text-[#1d9bf0] fill-[#1d9bf0]" />}
               {profile.badge_type === 'business' && <Verified className="w-5 h-5 text-[#ffd700] fill-[#ffd700]" />}
             </h1>
-            <p className="text-[#71767b]">@{profile.username}</p>
+            <p className="text-[#71767b]">@{profile.username || 'unknown'}</p>
           </div>
 
           {profile.bio && (
@@ -183,9 +198,11 @@ export default function ProfilePage({ params }: { params: { username: string } }
               <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{profile.location}</div>
             )}
             {profile.website && (
-              <div className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /><a href={profile.website} target="_blank" className="text-[#1d9bf0] hover:underline">{profile.website.replace(/^https?:\/\//, '')}</a></div>
+              <div className="flex items-center gap-1"><LinkIcon className="w-4 h-4" /><a href={profile.website} target="_blank" className="text-[#1d9bf0] hover:underline">{profile.website?.replace(/^https?:\/\//, '')}</a></div>
             )}
-            <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+            {profile.created_at && (
+              <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+            )}
           </div>
 
           <div className="flex gap-4 mt-4 text-sm">
