@@ -33,31 +33,36 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden py-12">
+      {/* Animated Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-primary/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-accent/20 rounded-full mix-blend-screen filter blur-[120px] animate-blob" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-[20%] right-[10%] w-[30vw] h-[30vw] bg-success/10 rounded-full mix-blend-screen filter blur-[80px] animate-blob" style={{ animationDelay: '4s' }}></div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center gap-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] rounded-2xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">GPM</span>
+        <div className="text-center mb-8 animate-fade-in">
+          <Link href="/" className="inline-flex items-center justify-center gap-3 group">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(120,86,255,0.3)] transform transition-transform group-hover:scale-105 group-hover:rotate-3 duration-300">
+              <span className="text-white font-bold text-2xl tracking-tighter">GPM</span>
             </div>
           </Link>
-          <h1 className="mt-6 text-3xl font-bold text-white">Join GPM</h1>
-          <p className="mt-2 text-dark-600">Create your account</p>
+          <h1 className="mt-6 text-4xl font-bold text-white tracking-tight">Join GPM</h1>
+          <p className="mt-2 text-dark-500 text-lg">Create your account</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-dark-50 border border-dark-100 rounded-2xl p-8">
+        <div className="glass-panel rounded-3xl p-8 sm:p-10 animate-slide-up">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-dark-600 mb-2">
+              <label className="block text-sm font-medium text-dark-400 mb-2 ml-1">
                 Username
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
+                className="w-full px-5 py-4 glass-input rounded-xl text-white placeholder-dark-500 focus:outline-none"
                 placeholder="johndoe"
                 required
                 minLength={3}
@@ -65,28 +70,28 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-600 mb-2">
+              <label className="block text-sm font-medium text-dark-400 mb-2 ml-1">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
+                className="w-full px-5 py-4 glass-input rounded-xl text-white placeholder-dark-500 focus:outline-none"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-600 mb-2">
+              <label className="block text-sm font-medium text-dark-400 mb-2 ml-1">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white placeholder-dark-500 focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all"
+                className="w-full px-5 py-4 glass-input rounded-xl text-white placeholder-dark-500 focus:outline-none"
                 placeholder="••••••••"
                 required
                 minLength={6}
@@ -94,49 +99,51 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-600 mb-2">
+              <label className="block text-sm font-medium text-dark-400 mb-2 ml-1">
                 Account Type
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-3.5 bg-dark-100 border border-dark-200 rounded-xl text-white focus:border-primary focus:bg-dark-50 focus:ring-0 transition-all appearance-none cursor-pointer"
+                className="w-full px-5 py-4 glass-input rounded-xl text-white focus:outline-none appearance-none cursor-pointer"
               >
-                <option value="user">Personal Account</option>
-                <option value="creator">Creator Account</option>
-                <option value="business">Business Account</option>
+                <option value="user" className="bg-dark-100">Personal Account</option>
+                <option value="creator" className="bg-dark-100">Creator Account</option>
+                <option value="business" className="bg-dark-100">Business Account</option>
               </select>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-white hover:bg-gray-100 disabled:bg-dark-200 disabled:cursor-not-allowed text-black font-bold rounded-full transition-all text-base"
+              className="w-full mt-4 py-4 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_30px_rgba(120,86,255,0.4)] disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-[0.98] text-lg"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 
           {/* Terms */}
-          <p className="mt-4 text-xs text-dark-500 text-center">
+          <p className="mt-8 text-xs text-dark-500 text-center uppercase tracking-wider font-semibold">
             By signing up, you agree to our{' '}
-            <Link href="/terms" className="text-primary hover:underline">
-              Terms of Service
+            <Link href="/terms" className="text-primary hover:text-white transition-colors">
+              Terms
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="text-primary hover:underline">
+            <Link href="/privacy" className="text-primary hover:text-white transition-colors">
               Privacy Policy
             </Link>
           </p>
         </div>
 
         {/* Sign In Link */}
-        <p className="mt-6 text-center text-dark-600">
-          Already have an account?{' '}
-          <Link href="/login" className="text-primary hover:underline font-medium">
-            Sign in
-          </Link>
-        </p>
+        <div className="mt-8 text-center animate-fade-in drop-shadow-md">
+          <p className="text-dark-400">
+            Already have an account?{' '}
+            <Link href="/login" className="text-white hover:text-primary font-semibold transition-colors duration-200">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

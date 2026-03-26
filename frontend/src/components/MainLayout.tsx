@@ -27,15 +27,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       { href: '/chat', label: 'Messages', icon: 'mail' },
       { href: '/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
     ];
-    
+
     // Add CRM only for business accounts
     if (user?.role === 'business') {
       baseItems.push({ href: '/crm', label: 'CRM', icon: 'briefcase' });
     }
-    
+
     baseItems.push({ href: '/creator', label: 'Creator', icon: 'star' });
     baseItems.push({ href: '/settings', label: 'Settings', icon: 'settings' });
-    
+
     return baseItems;
   };
 
@@ -52,71 +52,71 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       case 'home':
         return filled ? (
           <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
           </svg>
         ) : (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9,22 9,12 15,12 15,22"/>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
           </svg>
         );
       case 'search':
         return (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         );
       case 'bell':
         return filled ? (
           <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
           </svg>
         ) : (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
         );
       case 'mail':
         return filled ? (
           <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
           </svg>
         ) : (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
           </svg>
         );
       case 'bookmark':
         return filled ? (
           <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+            <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
           </svg>
         ) : (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
         );
       case 'briefcase':
         return (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
           </svg>
         );
       case 'star':
         return (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
           </svg>
         );
       case 'settings':
         return (
           <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
           </svg>
         );
       default:
@@ -139,13 +139,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   const content = (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-gradient-premium flex">
       {/* Left Sidebar - Desktop */}
       <aside className="hidden md:flex w-[275px] shrink-0 h-screen sticky top-0 flex-col justify-between py-2 px-2 xl:px-4">
         <div>
           {/* Logo */}
-          <Link href="/feed" className="inline-flex items-center justify-center w-[52px] h-[52px] rounded-full hover:bg-[#181836] transition-colors mb-1">
-            <span className="text-2xl font-bold text-white">GPM</span>
+          <Link href="/feed" className="inline-flex items-center justify-center w-[52px] h-[52px] rounded-full hover:bg-white/5 transition-colors mb-2 mt-1">
+            <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent tracking-tighter drop-shadow-sm">GPM</span>
           </Link>
 
           {/* Navigation */}
@@ -154,14 +154,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-5 px-3 py-3 rounded-full transition-colors ${
-                  isActive(item.href) ? 'font-bold' : 'hover:bg-[#181836]'
-                }`}
+                className={`flex items-center gap-5 px-4 py-3 rounded-full transition-all duration-300 group ${isActive(item.href) ? 'font-bold' : 'hover:bg-white/5'
+                  }`}
               >
-                <span className="text-white">
+                <span className={`transition-transform duration-300 group-hover:scale-110 ${isActive(item.href) ? 'text-primary' : 'text-white'}`}>
                   {getIcon(item.icon, isActive(item.href))}
                 </span>
-                <span className="text-xl text-white hidden xl:block">
+                <span className={`text-xl hidden xl:block transition-colors ${isActive(item.href) ? 'text-primary' : 'text-white group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </Link>
@@ -171,7 +170,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {/* Post Button */}
           <button
             onClick={() => router.push('/create/post')}
-            className="mt-4 w-[90%] mx-auto flex items-center justify-center py-3 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full transition-colors text-base"
+            className="mt-6 w-[90%] mx-auto flex items-center justify-center py-3.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_20px_rgba(120,86,255,0.4)] text-white font-bold rounded-full transition-all duration-300 transform hover:-translate-y-1 active:scale-95 text-lg"
           >
             <span className="hidden xl:inline">Post</span>
             <svg className="w-6 h-6 xl:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,17 +180,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* User Profile */}
-        <div className="mt-auto">
-          <button 
+        <div className="mt-auto mb-4">
+          <button
             onClick={() => router.push(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
-            className="flex items-center gap-3 p-3 rounded-full hover:bg-[#181836] cursor-pointer transition-colors w-full"
+            className="flex items-center gap-3 p-3 rounded-full hover:bg-white/5 cursor-pointer transition-colors w-full"
           >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0 shadow-[0_0_15px_rgba(29,155,240,0.3)]">
               {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0 hidden xl:block text-left">
-              <p className="font-bold text-white text-sm truncate">{user?.profile?.username || user?.username || 'User'}</p>
-              <p className="text-[#71767b] text-sm truncate">@{user?.profile?.username || user?.username || 'user'}</p>
+              <p className="font-bold text-white text-[15px] truncate">{user?.profile?.username || user?.username || 'User'}</p>
+              <p className="text-dark-500 text-sm truncate">@{user?.profile?.username || user?.username || 'user'}</p>
             </div>
           </button>
         </div>
@@ -245,10 +244,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Premium Card */}
-        <div className="bg-[#16181c] rounded-2xl p-4 mb-4 w-full">
-          <h2 className="text-xl font-bold text-white mb-2">Subscribe to Premium</h2>
-          <p className="text-sm text-white mb-4">Subscribe to unlock new features and get a verified badge.</p>
-          <button className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full transition-colors">
+        <div className="glass-panel rounded-2xl p-5 mb-4 w-full border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden group">
+          <div className="absolute top-[-50%] right-[-10%] w-[100px] h-[100px] bg-primary/20 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/40 transition-all duration-500"></div>
+          <h2 className="text-xl font-bold text-white mb-2 relative z-10">Subscribe to Premium</h2>
+          <p className="text-sm text-dark-400 mb-5 relative z-10">Subscribe to unlock new features and get a verified badge.</p>
+          <button className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white font-bold rounded-full transition-all duration-300 transform hover:-translate-y-0.5 relative z-10">
             Subscribe
           </button>
         </div>
@@ -280,9 +280,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center p-2 ${
-                isActive(item.href) ? 'text-white' : 'text-[#71767b]'
-              }`}
+              className={`flex flex-col items-center p-2 ${isActive(item.href) ? 'text-white' : 'text-[#71767b]'
+                }`}
             >
               {getIcon(item.icon, isActive(item.href))}
             </Link>

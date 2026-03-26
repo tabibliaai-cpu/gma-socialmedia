@@ -49,33 +49,33 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
   const charLimit = 280;
 
   return (
-    <div className="bg-transparent">
+    <div className="glass-panel rounded-2xl p-5 mb-2 border border-white/5 transition-all duration-300 hover:border-primary/20 hover:shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
       <form onSubmit={handleSubmit}>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white font-bold">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(120,86,255,0.3)]">
             {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pt-1">
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="What's happening?"
-              className="w-full bg-transparent border-none text-xl text-white placeholder-[#71767b] focus:outline-none resize-none min-h-[60px]"
+              className="w-full bg-transparent border-none text-xl text-white placeholder-dark-500 focus:outline-none resize-none min-h-[60px]"
               rows={2}
               maxLength={charLimit}
             />
 
             {showMediaInput && (
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2 animate-fade-in">
                 <input
                   type="url"
                   value={mediaUrl}
                   onChange={(e) => setMediaUrl(e.target.value)}
                   placeholder="Paste image or video URL"
-                  className="flex-1 px-4 py-2 bg-[#202327] border border-[#2f3336] rounded-lg text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
+                  className="flex-1 px-4 py-2.5 glass-input rounded-xl text-white text-sm placeholder-dark-500 focus:outline-none transition-colors"
                 />
                 <button
                   type="button"
@@ -83,7 +83,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
                     setMediaUrl('');
                     setShowMediaInput(false);
                   }}
-                  className="p-2 text-[#71767b] hover:text-white transition-colors"
+                  className="p-2.5 text-dark-400 hover:text-white hover:bg-white/10 rounded-full transition-all duration-300"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -93,12 +93,12 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between mt-3 pl-13">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between mt-4 pl-16">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowMediaInput(true)}
-              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
+              className="p-2.5 text-primary hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(120,86,255,0.2)]"
               title="Add image"
             >
               <Image className="w-5 h-5" />
@@ -106,36 +106,36 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
             <button
               type="button"
               onClick={() => setShowMediaInput(true)}
-              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
+              className="p-2.5 text-primary hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(120,86,255,0.2)]"
               title="Add video"
             >
               <Video className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
+              className="p-2.5 text-primary hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(120,86,255,0.2)]"
               title="Add emoji"
             >
               <Smile className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
+              className="p-2.5 text-primary hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(120,86,255,0.2)]"
               title="Schedule"
             >
               <Calendar className="w-5 h-5" />
             </button>
             <button
               type="button"
-              className="p-2 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full transition-colors"
+              className="p-2.5 text-primary hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(120,86,255,0.2)]"
               title="Add location"
             >
               <MapPin className="w-5 h-5" />
             </button>
-            
+
             {/* Character counter */}
             {caption.length > 0 && (
-              <span className={`ml-2 text-sm ${charCount > charLimit - 20 ? 'text-yellow-500' : 'text-[#71767b]'}`}>
+              <span className={`ml-3 text-sm font-medium ${charCount > charLimit - 20 ? 'text-warning' : 'text-dark-400'}`}>
                 {charLimit - charCount}
               </span>
             )}
@@ -144,7 +144,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
           <button
             type="submit"
             disabled={loading || (!caption.trim() && !mediaUrl)}
-            className="px-5 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full transition-all text-sm"
+            className="px-6 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_20px_rgba(120,86,255,0.4)] disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed text-white font-bold rounded-full transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-sm"
           >
             {loading ? 'Posting...' : 'Post'}
           </button>

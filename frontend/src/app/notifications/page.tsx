@@ -42,7 +42,7 @@ export default function NotificationsPage() {
   const markAsRead = async (id: string) => {
     try {
       await notificationsAPI.markAsRead(id);
-      setNotifications(notifications.map(n => 
+      setNotifications(notifications.map(n =>
         n.id === id ? { ...n, read: true } : n
       ));
     } catch (error) {
@@ -87,22 +87,21 @@ export default function NotificationsPage() {
     <MainLayout>
       <div className="min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336]">
-          <h1 className="px-4 py-4 text-xl font-bold text-white">Notifications</h1>
-          <div className="flex">
+        <div className="sticky top-0 bg-black/60 backdrop-blur-xl z-10 border-b border-white/5">
+          <h1 className="px-5 py-4 text-xl font-bold bg-gradient-to-r from-white to-dark-400 bg-clip-text text-transparent">Notifications</h1>
+          <div className="flex relative">
             {['All', 'Mentions', 'Verified'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab.toLowerCase())}
-                className={`flex-1 py-4 text-center font-medium transition-colors relative ${
-                  activeTab === tab.toLowerCase()
+                className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${activeTab === tab.toLowerCase()
                     ? 'text-white'
-                    : 'text-[#71767b] hover:bg-[#181836]'
-                }`}
+                    : 'text-dark-400 hover:bg-white/5'
+                  }`}
               >
                 {tab}
                 {activeTab === tab.toLowerCase() && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>
                 )}
               </button>
             ))}
@@ -121,29 +120,28 @@ export default function NotificationsPage() {
             <p className="text-[#71767b] text-sm mt-2">When you get notifications, they'll show up here</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#2f3336]">
+          <div className="divide-y divide-white/5">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
                 onClick={() => !notification.read && markAsRead(notification.id)}
-                className={`p-4 hover:bg-[#181836] transition-colors cursor-pointer flex gap-4 ${
-                  !notification.read ? 'bg-[#1d9bf0]/5' : ''
-                }`}
+                className={`p-5 hover:bg-white/5 transition-all duration-300 cursor-pointer flex gap-5 ${!notification.read ? 'bg-primary/5 border-l-2 border-primary' : 'border-l-2 border-transparent'
+                  }`}
               >
-                <div className="shrink-0">
+                <div className="shrink-0 mt-1">
                   {getIcon(notification.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white text-xs font-bold">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-sm font-bold shadow-[0_0_10px_rgba(120,86,255,0.3)]">
                       {notification.actor?.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                   </div>
-                  <p className="text-white font-medium">{notification.title || notification.content}</p>
+                  <p className="text-white text-lg font-medium tracking-tight mb-1">{notification.title || notification.content}</p>
                   {notification.title && notification.content && (
-                    <p className="text-[#71767b] text-sm mt-1">{notification.content}</p>
+                    <p className="text-dark-400 text-base">{notification.content}</p>
                   )}
-                  <p className="text-[#71767b] text-sm mt-1">{formatTime(notification.created_at)}</p>
+                  <p className="text-dark-500 text-xs mt-2 font-medium">{formatTime(notification.created_at)}</p>
                 </div>
               </div>
             ))}

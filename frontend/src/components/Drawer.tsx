@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from '
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import {
   Home, Search, Bell, Mail, Bookmark, Briefcase, Star, Settings,
   User, LogOut, ChevronRight, X
 } from 'lucide-react';
@@ -19,23 +19,23 @@ interface DrawerProps {
 export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
-  
+
   // Motion values for drag gestures
   const x = useMotionValue(0);
   const backgroundOpacity = useTransform(x, [-250, 0, 250], [0.6, 0, 0]);
   const scale = useTransform(x, [-250, 0], [0.95, 1]);
-  
+
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
@@ -59,14 +59,14 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
       { icon: Mail, label: 'Messages', href: '/chat' },
       { icon: Bookmark, label: 'Bookmarks', href: '/bookmarks' },
     ];
-    
+
     if (user?.role === 'business') {
       items.push({ icon: Briefcase, label: 'CRM', href: '/crm' });
     }
-    
+
     items.push({ icon: Star, label: 'Creator', href: '/creator' });
     items.push({ icon: Settings, label: 'Settings', href: '/settings' });
-    
+
     return items;
   };
 
@@ -113,7 +113,7 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ 
+            transition={{
               type: 'spring',
               damping: 30,
               stiffness: 300,
@@ -124,21 +124,21 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
             style={{ x }}
-            className="fixed top-0 left-0 h-full w-[280px] max-w-[85vw] bg-black border-r border-[#2f3336] z-50 shadow-2xl overflow-hidden"
+            className="fixed top-0 left-0 h-full w-[280px] max-w-[85vw] bg-black/80 backdrop-blur-2xl border-r border-white/10 z-50 shadow-2xl overflow-hidden"
           >
             {/* Drawer Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#2f3336]">
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg shadow-[0_0_10px_rgba(120,86,255,0.4)]">
                   GPM
                 </div>
                 <span className="text-white font-bold text-xl">Menu</span>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-[#181836] rounded-full transition-colors"
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
               >
-                <X className="w-5 h-5 text-[#71767b]" />
+                <X className="w-5 h-5 text-dark-400" />
               </button>
             </div>
 
@@ -148,34 +148,34 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
                 <button
                   key={item.href}
                   onClick={() => handleNavClick(item.href)}
-                  className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[#181836] transition-colors"
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/5 transition-colors group"
                 >
-                  <item.icon className="w-6 h-6 text-white" />
-                  <span className="text-white text-lg">{item.label}</span>
+                  <item.icon className="w-6 h-6 text-dark-400 group-hover:text-primary transition-colors" />
+                  <span className="text-white text-lg font-medium group-hover:text-primary transition-colors">{item.label}</span>
                 </button>
               ))}
             </nav>
 
             {/* User Profile Section */}
             {user && (
-              <div className="border-t border-[#2f3336]">
+              <div className="border-t border-white/5">
                 {/* Profile Link */}
                 <button
                   onClick={() => handleNavClick(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-[#181836] transition-colors"
+                  className="w-full flex items-center gap-4 p-5 hover:bg-white/5 transition-colors group"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0 shadow-[0_0_10px_rgba(120,86,255,0.3)] group-hover:scale-105 transition-transform">
                     {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-white font-bold truncate">
+                    <p className="text-white font-bold truncate text-lg group-hover:text-primary transition-colors">
                       {user?.profile?.username || user?.username || 'User'}
                     </p>
-                    <p className="text-[#71767b] text-sm truncate">
+                    <p className="text-dark-500 text-sm truncate">
                       @{user?.profile?.username || user?.username || 'user'}
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-[#71767b]" />
+                  <ChevronRight className="w-5 h-5 text-dark-500 group-hover:text-primary transition-colors" />
                 </button>
 
                 {/* Logout */}

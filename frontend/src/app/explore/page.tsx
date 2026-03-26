@@ -127,7 +127,7 @@ function ExplorePageContent() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Search"
-                className="w-full pl-12 pr-4 py-3 bg-[#202327] border-none rounded-full text-white placeholder-[#71767b] focus:bg-black focus:ring-1 focus:ring-[#1d9bf0] transition-all"
+                className="w-full pl-12 pr-4 py-3 glass-input rounded-full text-white placeholder-dark-500 focus:bg-white/5 focus:ring-1 focus:ring-primary transition-all duration-300"
               />
               {searchQuery && (
                 <button
@@ -136,7 +136,7 @@ function ExplorePageContent() {
                     setSearchResults(null);
                     setShowSearch(false);
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#1d9bf0]"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-white transition-colors"
                 >
                   ✕
                 </button>
@@ -146,21 +146,20 @@ function ExplorePageContent() {
 
           {/* Tabs */}
           {!showSearch && (
-            <div className="border-b border-[#2f3336] overflow-x-auto">
+            <div className="border-b border-white/5 overflow-x-auto">
               <div className="flex min-w-max">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-4 font-medium whitespace-nowrap relative ${
-                      activeTab === tab.id
+                    className={`px-4 py-4 font-medium whitespace-nowrap relative transition-colors ${activeTab === tab.id
                         ? 'text-white'
-                        : 'text-[#71767b] hover:bg-[#181836]'
-                    }`}
+                        : 'text-dark-400 hover:bg-white/5'
+                      }`}
                   >
                     {tab.label}
                     {activeTab === tab.id && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-[#1d9bf0] rounded-full"></div>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>
                     )}
                   </button>
                 ))}
@@ -181,19 +180,19 @@ function ExplorePageContent() {
                 {/* Users */}
                 {searchResults?.internal?.users?.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-bold text-white mb-3">Users</h3>
+                    <h3 className="text-lg font-bold text-white mb-3 px-2">Users</h3>
                     {searchResults.internal.users.map((user: any) => (
                       <Link
                         key={user.user_id}
                         href={`/profile/${user.username}`}
-                        className="flex items-center gap-3 p-3 hover:bg-[#181836] rounded-xl transition-colors"
+                        className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all duration-300 border border-transparent hover:border-white/10"
                       >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(120,86,255,0.3)]">
                           {user.username?.[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-white">{user.username}</p>
-                          <p className="text-sm text-[#71767b]">@{user.username}</p>
+                          <p className="font-bold text-white text-lg">{user.username}</p>
+                          <p className="text-sm text-dark-400">@{user.username}</p>
                         </div>
                       </Link>
                     ))}
@@ -201,14 +200,14 @@ function ExplorePageContent() {
                 )}
 
                 {/* No Results */}
-                {(!searchResults || 
-                  (!searchResults?.internal?.users?.length && 
-                   !searchResults?.posts?.length)) && (
-                  <div className="text-center py-8">
-                    <p className="text-[#71767b]">No results for "{searchQuery}"</p>
-                    <p className="text-sm text-[#71767b] mt-2">Try searching for something else</p>
-                  </div>
-                )}
+                {(!searchResults ||
+                  (!searchResults?.internal?.users?.length &&
+                    !searchResults?.posts?.length)) && (
+                    <div className="text-center py-8">
+                      <p className="text-[#71767b]">No results for "{searchQuery}"</p>
+                      <p className="text-sm text-[#71767b] mt-2">Try searching for something else</p>
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -219,25 +218,25 @@ function ExplorePageContent() {
           <div>
             {/* Trending Section */}
             <div>
-              <h2 className="px-4 py-3 font-bold text-white text-xl">Trends for you</h2>
+              <h2 className="px-5 py-4 font-bold text-white text-xl">Trends for you</h2>
               {trendingTopics[activeTab as keyof typeof trendingTopics]?.map((topic, index) => (
                 <button
                   key={`${activeTab}-${index}`}
                   onClick={() => handleTagClick(topic.tag)}
-                  className="w-full px-4 py-3 hover:bg-[#181836] transition-colors text-left"
+                  className="w-full px-5 py-4 hover:bg-white/5 transition-all duration-300 text-left border-b border-white/5 group"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs text-[#71767b]">{topic.category} · Trending</p>
-                      <p className="font-bold text-white mt-0.5">#{topic.tag}</p>
-                      <p className="text-xs text-[#71767b] mt-0.5">{topic.posts} posts</p>
+                      <p className="text-xs text-dark-400">{topic.category} · Trending</p>
+                      <p className="font-bold text-white mt-1 text-lg group-hover:text-primary transition-colors">#{topic.tag}</p>
+                      <p className="text-xs text-dark-500 mt-1">{topic.posts} posts</p>
                     </div>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         // Show more options
                       }}
-                      className="p-2 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full"
+                      className="p-2 text-dark-400 hover:bg-white/10 hover:text-white rounded-full transition-all"
                     >
                       ···
                     </button>
@@ -248,34 +247,34 @@ function ExplorePageContent() {
 
             {/* Who to Follow Section */}
             <div className="mt-4">
-              <h2 className="px-4 py-3 font-bold text-white text-xl">Who to follow</h2>
+              <h2 className="px-5 py-4 font-bold text-white text-xl">Who to follow</h2>
               {suggestedUsers.map((user) => (
                 <div
                   key={user.username}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-[#181836] transition-colors"
+                  className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-all duration-300 border-b border-white/5"
                 >
-                  <Link 
+                  <Link
                     href={`/profile/${user.username}`}
-                    className="flex items-center gap-3 flex-1"
+                    className="flex items-center gap-4 flex-1 group"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(120,86,255,0.2)] group-hover:scale-105 transition-transform">
                       {user.username[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-white">{user.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white group-hover:underline">{user.name}</span>
                         {user.badge && (
-                          <svg className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" viewBox="0 0 24 24">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          <svg className="w-4 h-4 text-primary fill-primary" viewBox="0 0 24 24">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-sm text-[#71767b]">@{user.username}</p>
+                      <p className="text-sm text-dark-400">@{user.username}</p>
                     </div>
                   </Link>
-                  <button 
+                  <button
                     onClick={() => handleFollow(user.username)}
-                    className="px-4 py-1.5 bg-white text-black font-bold rounded-full hover:bg-gray-200 text-sm"
+                    className="px-5 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 text-sm transition-transform active:scale-95"
                   >
                     Follow
                   </button>
@@ -283,7 +282,7 @@ function ExplorePageContent() {
               ))}
               <Link
                 href="/explore/people"
-                className="block px-4 py-4 text-[#1d9bf0] hover:bg-[#181836] transition-colors"
+                className="block px-5 py-4 text-primary hover:bg-white/5 transition-colors"
               >
                 Show more
               </Link>

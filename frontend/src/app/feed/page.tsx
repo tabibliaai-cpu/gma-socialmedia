@@ -46,43 +46,40 @@ export default function FeedPage() {
     <MainLayout>
       <div className="min-h-screen">
         {/* Header */}
-        <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336]">
-          <h1 className="px-4 py-3 text-xl font-bold text-white">Home</h1>
+        <div className="sticky top-0 bg-black/60 backdrop-blur-xl z-10 border-b border-white/5">
+          <h1 className="px-5 py-3 text-xl font-bold bg-gradient-to-r from-white to-dark-400 bg-clip-text text-transparent">Home</h1>
           <div className="flex relative">
             <button
               onClick={() => setActiveTab('for-you')}
-              className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${
-                activeTab === 'for-you' ? 'text-white' : 'text-[#71767b] hover:bg-[#181836]'
-              }`}
+              className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${activeTab === 'for-you' ? 'text-white' : 'text-dark-400 hover:bg-white/5'
+                }`}
             >
               <span className="flex items-center justify-center gap-2">
-                <Sparkles className={`w-4 h-4 transition-all duration-300 ${activeTab === 'for-you' ? 'text-[#1d9bf0]' : ''}`} />
+                <Sparkles className={`w-4 h-4 transition-all duration-300 ${activeTab === 'for-you' ? 'text-primary drop-shadow-[0_0_8px_rgba(120,86,255,0.5)]' : ''}`} />
                 For you
               </span>
             </button>
             <button
               onClick={() => setActiveTab('following')}
-              className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${
-                activeTab === 'following' ? 'text-white' : 'text-[#71767b] hover:bg-[#181836]'
-              }`}
+              className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${activeTab === 'following' ? 'text-white' : 'text-dark-400 hover:bg-white/5'
+                }`}
             >
               <span className="flex items-center justify-center gap-2">
-                <Users className={`w-4 h-4 transition-all duration-300 ${activeTab === 'following' ? 'text-[#1d9bf0]' : ''}`} />
+                <Users className={`w-4 h-4 transition-all duration-300 ${activeTab === 'following' ? 'text-primary drop-shadow-[0_0_8px_rgba(120,86,255,0.5)]' : ''}`} />
                 Following
               </span>
             </button>
-            
+
             {/* Animated sliding indicator */}
-            <div 
-              className={`absolute bottom-0 h-1 bg-[#1d9bf0] rounded-full transition-all duration-300 ease-out ${
-                activeTab === 'for-you' ? 'left-0 w-1/2' : 'left-1/2 w-1/2'
-              }`}
+            <div
+              className={`absolute bottom-0 h-1 bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-300 ease-out shadow-[0_0_15px_rgba(120,86,255,0.5)] ${activeTab === 'for-you' ? 'left-0 w-1/2' : 'left-1/2 w-1/2'
+                }`}
             />
           </div>
         </div>
 
         {/* Create Post with animation */}
-        <div className={`border-b border-[#2f3336] p-4 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <div className={`p-4 pb-2 transition-all duration-500 relative z-0 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <CreatePost />
         </div>
 

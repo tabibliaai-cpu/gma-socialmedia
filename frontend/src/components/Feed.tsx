@@ -78,7 +78,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   const handleLike = async (postId: string, isLiked: boolean) => {
     setAnimatingPost(postId);
     setTimeout(() => setAnimatingPost(null), 500);
-    
+
     setPosts(posts.map(p => {
       if (p.id === postId) {
         return {
@@ -89,7 +89,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
       }
       return p;
     }));
-    
+
     try {
       if (isLiked) {
         await postsAPI.unlike(postId);
@@ -203,7 +203,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
 
   const formatTime = (dateString: string) => {
     if (!dateString) return 'just now';
-    
+
     try {
       const date = new Date(dateString);
       const now = new Date();
@@ -245,11 +245,11 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
         </div>
         <h2 className="text-white text-2xl font-bold mb-2">Your feed is empty</h2>
         <p className="text-[#71767b] max-w-sm mx-auto">
-          {tab === 'following' 
+          {tab === 'following'
             ? "Posts from people you follow will appear here. Start following some creators!"
             : "Create your first post to get started, or explore trending content!"}
         </p>
-        <Link 
+        <Link
           href={tab === 'following' ? '/explore' : '/create/post'}
           className="mt-6 inline-block px-6 py-2.5 bg-[#1d9bf0] text-white font-bold rounded-full hover:bg-[#1a8cd8] transition-colors"
         >
@@ -260,7 +260,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   }
 
   return (
-    <div className="divide-y divide-[#2f3336]">
+    <div className="space-y-4 px-2 pb-6 pt-2">
       {posts.map((post, index) => {
         const profile = post.profiles;
         const username = profile?.username || 'user';
@@ -268,22 +268,22 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
         const isPremium = badgeType === 'premium';
         const isBusiness = badgeType === 'business';
         const isVerified = badgeType !== 'none';
-        
+
         const content = post.caption || post.content || '';
         const isAnimating = animatingPost === post.id;
         const isAd = post.type === 'ad' || post.is_ad;
         const isArticle = post.type === 'article';
 
         return (
-          <article 
-            key={post.id} 
-            className={`p-4 hover:bg-[#181836]/50 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-[#1d9bf0]/5' : ''}`}
+          <article
+            key={post.id}
+            className={`glass-panel rounded-2xl p-5 md:p-6 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 border ${isAd ? 'border-primary/30 bg-primary/5 shadow-[0_0_20px_rgba(120,86,255,0.1)]' : 'border-white/5 hover:border-primary/20 hover:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group/post'}`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="flex gap-3">
+            <div className="flex gap-3 md:gap-4">
               {/* Avatar */}
-              <Link href={`/profile/${username}`} className="shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
+              <Link href={`/profile/${username}`} className="shrink-0 relative">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(120,86,255,0.3)] transform transition-transform duration-300 hover:scale-105">
                   {username[0].toUpperCase()}
                 </div>
               </Link>
@@ -295,25 +295,25 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   <Link href={`/profile/${username}`} className="font-bold text-white hover:underline">
                     {username}
                   </Link>
-                  
+
                   {/* Master Plan: Subscription Badges (Wrapped in Span to fix TypeScript) */}
                   {isPremium && (
-                    <span title="Premium Verified" className="inline-flex">
-                      <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
+                    <span title="Premium Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(120,86,255,0.5)]">
+                      <Verified className="w-4 h-4 text-primary fill-primary" />
                     </span>
                   )}
                   {isBusiness && (
-                    <span title="Business Verified" className="inline-flex">
-                      <Verified className="w-4 h-4 text-[#ffd700] fill-[#ffd700]" />
+                    <span title="Business Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]">
+                      <Verified className="w-4 h-4 text-warning fill-warning" />
                     </span>
                   )}
                   {isVerified && !isPremium && !isBusiness && (
-                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
+                    <Verified className="w-4 h-4 text-accent fill-accent shadow-[0_0_5px_rgba(29,155,240,0.5)] rounded-full" />
                   )}
 
-                  <span className="text-[#71767b]">@{username}</span>
-                  <span className="text-[#71767b]">·</span>
-                  <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
+                  <span className="text-dark-400">@{username}</span>
+                  <span className="text-dark-500">·</span>
+                  <span className="text-dark-400">{formatTime(post.created_at)}</span>
 
                   {/* Master Plan: Ad & Article Labels */}
                   {isAd && (
@@ -326,33 +326,33 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                       Article
                     </span>
                   )}
-                  
+
                   {/* Three-dot Menu */}
                   <div className="ml-auto relative" ref={menuRef}>
-                    <button 
+                    <button
                       onClick={() => setOpenMenuId(openMenuId === post.id ? null : post.id)}
                       className="p-1.5 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full transition-colors"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
-                    
+
                     {openMenuId === post.id && (
                       <div className="absolute right-0 top-8 w-48 bg-black border border-[#2f3336] rounded-xl shadow-lg overflow-hidden z-20">
-                        <button 
+                        <button
                           onClick={() => handleCopyText(content)}
                           className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
                         >
                           <Copy className="w-4 h-4" />
                           Copy text
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleShare(post.id)}
                           className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
                         >
                           <LinkIcon className="w-4 h-4" />
                           Copy link to post
                         </button>
-                        <button 
+                        <button
                           onClick={() => {
                             toast('Report feature coming soon', { icon: 'ℹ️' });
                             setOpenMenuId(null);
@@ -362,7 +362,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                           <Flag className="w-4 h-4" />
                           Report post
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeletePost(post.id)}
                           className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2f3336]"
                         >
@@ -377,11 +377,11 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                 {/* Caption / Article Preview */}
                 {isArticle ? (
                   <div className="mt-2 p-4 border border-[#2f3336] rounded-xl bg-[#151515]">
-                     <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
-                     <p className="text-[#71767b] line-clamp-3">{post.content}</p>
-                     <Link href={`/article/${post.id}`} className="text-[#1d9bf0] text-sm mt-2 inline-block hover:underline">
-                       Read full article
-                     </Link>
+                    <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
+                    <p className="text-[#71767b] line-clamp-3">{post.content}</p>
+                    <Link href={`/article/${post.id}`} className="text-[#1d9bf0] text-sm mt-2 inline-block hover:underline">
+                      Read full article
+                    </Link>
                   </div>
                 ) : (
                   <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
@@ -391,11 +391,11 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
 
                 {/* Media */}
                 {post.media_url && (
-                  <div className="mt-3 rounded-2xl overflow-hidden border border-[#2f3336]">
+                  <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 group-hover/post:border-white/20 transition-all duration-300">
                     {post.media_type === 'video' ? (
-                      <video src={post.media_url} controls className="w-full max-h-96 object-cover" />
+                      <video src={post.media_url} controls className="w-full max-h-[500px] object-cover" />
                     ) : (
-                      <img src={post.media_url} alt="" className="w-full max-h-96 object-cover" />
+                      <img src={post.media_url} alt="" className="w-full max-h-[500px] object-cover bg-black" />
                     )}
                   </div>
                 )}
@@ -424,7 +424,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   </button>
 
                   {/* Retweet */}
-                  <button 
+                  <button
                     onClick={() => handleRetweet(post.id)}
                     className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group"
                   >
@@ -437,16 +437,13 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   {/* Like */}
                   <button
                     onClick={() => handleLike(post.id, post.is_liked || false)}
-                    className={`flex items-center gap-1 group ${
-                      post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
-                    }`}
+                    className={`flex items-center gap-1 group ${post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
+                      }`}
                   >
-                    <div className={`p-2 rounded-full transition-all duration-200 ${
-                      post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
-                    } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
-                      <Heart className={`w-4 h-4 transition-transform duration-200 ${
-                        post.is_liked ? 'fill-pink-500' : ''
-                      } ${isAnimating ? 'scale-110' : ''}`} />
+                    <div className={`p-2 rounded-full transition-all duration-200 ${post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
+                      } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
+                      <Heart className={`w-4 h-4 transition-transform duration-200 ${post.is_liked ? 'fill-pink-500' : ''
+                        } ${isAnimating ? 'scale-110' : ''}`} />
                     </div>
                     <span className={`text-sm transition-all duration-200 ${isAnimating ? 'scale-110' : ''}`}>
                       {post.likes_count || 0}
@@ -454,11 +451,10 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   </button>
 
                   {/* Bookmark */}
-                  <button 
+                  <button
                     onClick={() => handleBookmark(post.id, post.is_bookmarked || false)}
-                    className={`flex items-center gap-1 group ${
-                      post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
-                    }`}
+                    className={`flex items-center gap-1 group ${post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
+                      }`}
                   >
                     <div className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? 'bg-[#1d9bf0]/10' : 'group-hover:bg-[#1d9bf0]/10'}`}>
                       <Bookmark className={`w-4 h-4 ${post.is_bookmarked ? 'fill-[#1d9bf0]' : ''}`} />
@@ -466,7 +462,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   </button>
 
                   {/* Share */}
-                  <button 
+                  <button
                     onClick={() => handleShare(post.id)}
                     className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
                   >
@@ -478,10 +474,10 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
 
                 {/* Comments Section */}
                 {openComments === post.id && (
-                  <div className="mt-3 pt-3 border-t border-[#2f3336]">
+                  <div className="mt-4 pt-4 border-t border-white/10">
                     {/* Add Comment */}
-                    <div className="flex gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="flex gap-3 mb-5">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_10px_rgba(120,86,255,0.3)]">
                         U
                       </div>
                       <div className="flex-1 flex gap-2">
@@ -490,12 +486,12 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
                           placeholder="Post your reply"
-                          className="flex-1 px-4 py-2 bg-transparent border border-[#2f3336] rounded-full text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
+                          className="flex-1 px-5 py-2.5 glass-input border border-white/10 rounded-full text-white text-sm placeholder-dark-500 focus:outline-none transition-colors"
                         />
                         <button
                           onClick={() => handleAddComment(post.id)}
                           disabled={!newComment.trim()}
-                          className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
+                          className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95"
                         >
                           Reply
                         </button>
