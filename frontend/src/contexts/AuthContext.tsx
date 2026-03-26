@@ -61,10 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    // FIX: Actually clear the browser storage on logout
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
     storeLogout();
     router.push('/login');
   };
