@@ -20,18 +20,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
+// Handle auth errors intelligently
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // FIX: Don't trigger forced logout if the 401 came from trying to log in!
-      const isAuthRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
-      
-      if (!isAuthRoute && typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
+        // Always clear dead tokens
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        
+        // ONLY force a redirect if we are NOT already on the login or register pages
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);
