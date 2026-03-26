@@ -1,32 +1,68 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
 
 @Injectable()
 export class AffiliatesService {
   constructor(private supabaseService: SupabaseService) {}
 
-  async createAffiliate(businessId: string, userId: string, badgeLabel: string) {
-    // Check count
+  async createAffiliate(businessId: string, targetUsername: string) {
+    // 1. Find the target user by username
+    const { data: targetUser } = await this.supabaseService
+      .from('profiles')
+      .select('user_id')
+      .eq('username', targetUsername)
+      .single();
+
+    if (!targetUser) {
+      throw new NotFoundException(`User @${targetUsername} not found`);
+    }
+
+    const userId = targetUser.user_id;
+
+    // 2. Fetch the Business's profile to get their name for the badge
+    const { data: businessProfile } = await this.supabaseService
+      .from('profiles')
+      .select('username')
+      .eq('user_id', businessId)
+      .single();
+
+    // 3. ENFORCE MASTER PLAN RULE: "Verified Agent - [Business Name]"
+    const badgeLabel = `Verified Agent – ${businessProfile?.username || 'Business'}`;
+
+    // 4. Check if already an affiliate
+    const { data: alreadyAffiliate } = await this.supabaseService
+      .from('affiliates')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (alreadyAffiliate) {
+       throw new BadRequestException('User is already an active affiliate');
+    }
+
+    // 5. Check the 10 Free Slots Limit Rule
     const { data: existing } = await this.supabaseService
       .from('affiliates')
       .select('id')
       .eq('business_id', businessId);
 
     if (existing && existing.length >= 10) {
-      // Check if payment exists
+      // Check if payment exists for the extra slots
       const { data: payment } = await this.supabaseService
         .from('transactions')
         .select('id')
         .eq('user_id', businessId)
         .eq('type', 'affiliate')
-        .eq('status', 'completed')
-        .gt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        .eq('status', 'completed');
 
-      if (!payment || payment.length < Math.floor((existing.length - 10) / 5) + 1) {
+      if (!payment || payment.length < Math.floor((existing.length - 10) / 1) + 1) {
         throw new BadRequestException('Payment required for additional affiliates (₹75 each)');
       }
     }
 
+    // 6. Insert the new Affiliate
     const { data, error } = await this.supabaseService
       .from('affiliates')
       .insert({
@@ -49,7 +85,7 @@ export class AffiliatesService {
   async getBusinessAffiliates(businessId: string) {
     const { data, error } = await this.supabaseService
       .from('affiliates')
-      .select('*')
+      .select('*, profiles!user_id(username, avatar_url, badge_type)')
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -64,7 +100,7 @@ export class AffiliatesService {
   async getUserAffiliates(userId: string) {
     const { data, error } = await this.supabaseService
       .from('affiliates')
-      .select('*')
+      .select('*, business:profiles!business_id(username, avatar_url, badge_type)')
       .eq('user_id', userId)
       .eq('is_active', true);
 
@@ -84,19 +120,6 @@ export class AffiliatesService {
 
     if (error) throw new Error('Failed to remove affiliate');
     return { message: 'Affiliate removed' };
-  }
-
-  async updateBadgeLabel(businessId: string, affiliateId: string, label: string) {
-    const { data, error } = await this.supabaseService
-      .from('affiliates')
-      .update({ badge_label: label })
-      .eq('id', affiliateId)
-      .eq('business_id', businessId)
-      .select()
-      .single();
-
-    if (error) throw new Error('Failed to update badge label');
-    return data;
   }
 
   async purchaseAffiliateSlots(businessId: string, slots: number, paymentId: string) {
