@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { usersAPI, postsAPI } from '@/lib/api';
+import { usersAPI, postsAPI, articlesAPI } from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import { MapPin, Link as LinkIcon, Calendar, MessageCircle, Share2, Verified, QrCode } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, MessageCircle, Share2, Verified, QrCode, Settings, Lock, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -17,10 +17,12 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [activeTab, setActiveTab] = useState('posts');
 
   useEffect(() => {
     if (targetUsername) {
@@ -50,6 +52,14 @@ export default function ProfilePage() {
         setPosts(userPosts || []);
       } catch (postErr) {
         console.error('Failed to load timeline', postErr);
+      }
+
+      // 4. Load User's Articles
+      try {
+        const { data: userArticles } = await articlesAPI.getByAuthor(profileData.user_id);
+        setArticles(userArticles || []);
+      } catch (artErr) {
+        console.error('Failed to load articles', artErr);
       }
 
     } catch (error: any) {
@@ -151,6 +161,9 @@ export default function ProfilePage() {
                   >
                     <QrCode className="w-5 h-5" />
                   </button>
+                  <Link href="/settings/privacy" className="p-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105" title="Privacy Settings">
+                    <Settings className="w-5 h-5" />
+                  </Link>
                   <Link href="/settings/profile" className="px-5 py-2 border border-white/10 text-white font-bold rounded-full hover:bg-white/10 transition-all duration-300 hover:scale-105 active:scale-95">
                     Edit profile
                   </Link>
@@ -160,16 +173,19 @@ export default function ProfilePage() {
                   {canMessage && (
                     <button
                       onClick={startChat}
-                      className="p-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105"
+                      className="px-4 py-2 flex items-center gap-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105 font-bold"
                     >
                       <MessageCircle className="w-5 h-5" />
+                      {profile.paid_chat_settings?.is_enabled && (
+                        <span className="text-sm">₹{profile.paid_chat_settings.price_per_message}</span>
+                      )}
                     </button>
                   )}
                   <button
                     onClick={handleFollowToggle}
                     className={`px-6 py-2 font-bold rounded-full transition-all duration-300 hover:scale-105 active:scale-95 ${isFollowing
-                        ? 'border border-white/10 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10'
-                        : 'bg-white text-black hover:bg-gray-200'
+                      ? 'border border-white/10 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10'
+                      : 'bg-white text-black hover:bg-gray-200'
                       }`}
                   >
                     {isFollowing ? 'Following' : 'Follow'}
@@ -190,6 +206,11 @@ export default function ProfilePage() {
               {profile.badge_type === 'business' && (
                 <span title="Business Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]">
                   <Verified className="w-6 h-6 text-warning fill-warning" />
+                </span>
+              )}
+              {profile.affiliates && profile.affiliates.length > 0 && (
+                <span title="Affiliate" className="inline-flex drop-shadow-[0_0_5px_rgba(255,215,0,0.5)] bg-warning/10 text-warning text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap align-middle ml-2">
+                  🏢 {profile.affiliates[0].label || 'Brand Ambassador'}
                 </span>
               )}
             </h1>
@@ -223,31 +244,113 @@ export default function ProfilePage() {
         </div>
 
         {/* Timeline Tabs */}
-        <div className="flex border-b border-white/5">
-          <button className="flex-1 py-4 text-white font-bold relative hover:bg-white/5 transition-colors">
+        <div className="flex border-b border-white/5 overflow-x-auto overflow-y-hidden no-scrollbar">
+          <button onClick={() => setActiveTab('posts')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'posts' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
             Posts
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>
+            {activeTab === 'posts' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
           </button>
-          <button className="flex-1 py-4 text-dark-400 font-bold hover:bg-white/5 transition-colors">Replies</button>
-          <button className="flex-1 py-4 text-dark-400 font-bold hover:bg-white/5 transition-colors">Media</button>
+
+          <button onClick={() => setActiveTab('articles')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'articles' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
+            Articles
+            {activeTab === 'articles' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
+          </button>
+
+          {isOwnProfile && profile.role === 'creator' && (
+            <button onClick={() => setActiveTab('monetization')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'monetization' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
+              Monetization
+              {activeTab === 'monetization' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
+            </button>
+          )}
+
+          {isOwnProfile && profile.role === 'business' && (
+            <button onClick={() => setActiveTab('business')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'business' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
+              Dashboard
+              {activeTab === 'business' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
+            </button>
+          )}
         </div>
 
         {/* Timeline Content */}
         <div className="divide-y divide-white/5 pb-10">
-          {posts.length === 0 ? (
-            <div className="text-center py-16">
-              <h2 className="text-white text-2xl font-bold">No posts yet</h2>
-              <p className="text-dark-400 mt-2 text-lg">When they post, their timeline will show up here.</p>
-            </div>
-          ) : (
-            posts.map(post => (
-              <div key={post.id} className="p-6 text-white hover:bg-white/5 transition-all duration-300">
-                <p className="whitespace-pre-wrap text-[1.05rem]">{post.caption}</p>
-                {post.media_url && (
-                  <img src={post.media_url} alt="Post media" className="mt-4 rounded-2xl border border-white/10 max-h-[500px] w-full object-cover shadow-[0_5px_15px_rgba(0,0,0,0.2)]" />
-                )}
+          {activeTab === 'posts' && (
+            posts.length === 0 ? (
+              <div className="text-center py-16">
+                <h2 className="text-white text-2xl font-bold">No posts yet</h2>
+                <p className="text-dark-400 mt-2 text-lg">When they post, their timeline will show up here.</p>
               </div>
-            ))
+            ) : (
+              posts.map(post => (
+                <div key={post.id} className="p-6 text-white hover:bg-white/5 transition-all duration-300">
+                  <p className="whitespace-pre-wrap text-[1.05rem]">{post.caption}</p>
+                  {post.media_url && (
+                    <img src={post.media_url} alt="Post media" className="mt-4 rounded-2xl border border-white/10 max-h-[500px] w-full object-cover shadow-[0_5px_15px_rgba(0,0,0,0.2)]" />
+                  )}
+                </div>
+              ))
+            )
+          )}
+
+          {activeTab === 'articles' && (
+            articles.length === 0 ? (
+              <div className="text-center py-16">
+                <h2 className="text-white text-2xl font-bold">No articles yet</h2>
+                <p className="text-dark-400 mt-2 text-lg">When they publish articles, they'll appear here.</p>
+              </div>
+            ) : (
+              articles.map(article => (
+                <div key={article.id} className="p-6 text-white hover:bg-white/5 transition-all duration-300 flex justify-between items-center cursor-pointer" onClick={() => router.push(`/articles/${article.id}`)}>
+                  <div>
+                    <h3 className="text-xl font-bold flex items-center gap-2 mb-1">
+                      {article.title}
+                      {article.price > 0 && <span className="inline-flex items-center gap-1 bg-primary/20 text-primary text-xs px-2.5 py-1 rounded-full shadow-[0_0_10px_rgba(120,86,255,0.3)]"><Lock className="w-3 h-3" /> ₹{article.price}</span>}
+                    </h3>
+                    <p className="text-dark-400 mt-1">{new Date(article.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-dark-400" />
+                </div>
+              ))
+            )
+          )}
+
+          {activeTab === 'monetization' && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-white mb-6">Creator Monetization</h2>
+              <div className="glass-panel p-6 rounded-2xl mb-4 border border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/20 transition-all duration-500"></div>
+                <h3 className="font-bold text-white text-lg relative z-10">Paid Chat Settings</h3>
+                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Set your price per message to filter your DMs and earn from interactions.</p>
+                <div className="flex items-center justify-between relative z-10">
+                  <span className="text-white font-medium text-lg bg-black/50 px-4 py-2 rounded-xl border border-white/5">
+                    Price: <span className="text-primary font-bold">₹{profile.paid_chat_settings?.price_per_message || 0}</span>
+                  </span>
+                  <Link href="/settings/monetization" className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white rounded-full font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5">
+                    Edit Settings
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'business' && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-white mb-6">Business Dashboard</h2>
+              <div className="glass-panel p-6 rounded-2xl mb-6 border border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/20 transition-all duration-500"></div>
+                <h3 className="font-bold text-white text-lg relative z-10">Affiliates & Brand Ambassadors</h3>
+                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Manage users who represent your brand and track their performance.</p>
+                <Link href="/settings/affiliates" className="inline-block px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white rounded-full font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 relative z-10">
+                  Manage Affiliates
+                </Link>
+              </div>
+              <div className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden group hover:border-warning/30 transition-colors">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-warning/20 transition-all duration-500"></div>
+                <h3 className="font-bold text-white text-lg relative z-10">CRM & Leads</h3>
+                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Access your leads dashboard and monitor advertising campaigns.</p>
+                <Link href="/crm" className="inline-block px-5 py-2.5 border border-white/20 hover:bg-white/10 text-white rounded-full font-bold text-sm transition-all duration-300 relative z-10">
+                  Open CRM
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       </div>
