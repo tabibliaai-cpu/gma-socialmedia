@@ -67,4 +67,21 @@ export class ChatController {
   async deleteMessage(@Request() req, @Param('messageId') messageId: string) {
     return this.chatService.deleteMessage(req.user.id, messageId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('start/:userId')
+  async startConversation(@Request() req, @Param('userId') userId: string) {
+    return this.chatService.startConversation(req.user.id, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('message')
+  async sendMessage(
+    @Request() req,
+    @Body('receiverId') receiverId: string,
+    @Body('message') message: string,
+    @Body('mediaUrl') mediaUrl?: string,
+  ) {
+    return this.chatService.sendMessage(req.user.id, receiverId, message, mediaUrl);
+  }
 }

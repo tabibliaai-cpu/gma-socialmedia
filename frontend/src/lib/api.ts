@@ -52,6 +52,7 @@ export const usersAPI = {
   updatePrivacy: (data: any) => api.put('/users/privacy', data),
   follow: (userId: string) => api.post(`/users/follow/${userId}`),
   unfollow: (userId: string) => api.post(`/users/unfollow/${userId}`),
+  checkFollow: (userId: string) => api.get(`/users/check-follow/${userId}`),
   getFollowers: (username: string) => api.get(`/users/${username}/followers`),
   getFollowing: (username: string) => api.get(`/users/${username}/following`),
   createShareLink: () => api.post('/users/share-link'),
@@ -84,6 +85,7 @@ export const chatAPI = {
   getConversations: () => api.get('/chat/conversations'),
   getConversation: (userId: string, page = 1) =>
     api.get(`/chat/conversation/${userId}?page=${page}`),
+  startConversation: (userId: string) => api.post(`/chat/start/${userId}`),
   sendMessage: (userId: string, message: string, mediaUrl?: string) =>
     api.post(`/chat/message`, { receiverId: userId, message, mediaUrl }),
   block: (userId: string) => api.post(`/chat/block/${userId}`),

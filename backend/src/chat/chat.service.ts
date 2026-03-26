@@ -1,291 +1,214 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
-import { SendMessageDto } from './dto/send-message.dto';
-import { AiService } from '../ai/ai.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatService {
   constructor(
     private supabaseService: SupabaseService,
-    private aiService: AiService,
+    private notificationsService: NotificationsService,
   ) {}
 
-  async canSendMessage(senderId: string, receiverId: string) {
-    // Check if blocked
-    const { data: block } = await this.supabaseService
-      .from('blocks')
-      .select('id')
-      .or(`and(blocker_id.eq.${receiverId},blocked_id.eq.${senderId}),and(blocker_id.eq.${senderId},blocked_id.eq.${receiverId})`)
-      .single();
+  async getConversations(userId: string) {
+    const { data: messages, error } = await this.supabaseService
+      .from('messages')
+      .select('id, content, sender_id, receiver_id, created_at, read')
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false });
 
-    if (block) {
-      return { allowed: false, reason: 'User is blocked' };
+    if (error) {
+      console.error('Get conversations error:', error);
+      return [];
     }
 
-    // Check privacy settings
-    const { data: privacy } = await this.supabaseService
-      .from('privacy_settings')
-      .select('dm_permission')
-      .eq('user_id', receiverId)
-      .single();
+    // Group messages by conversation partner
+    const conversationsMap = new Map();
+    
+    for (const msg of messages || []) {
+      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+      
+      if (!conversationsMap.has(partnerId)) {
+        // Get partner profile
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('user_id, username, avatar_url, badge_type')
+          .eq('user_id', partnerId)
+          .single();
 
-    if (privacy?.dm_permission === 'none') {
-      return { allowed: false, reason: 'User does not accept messages' };
-    }
-
-    // Check paid chat
-    const { data: paidSettings } = await this.supabaseService
-      .from('paid_chat_settings')
-      .select('*')
-      .eq('user_id', receiverId)
-      .single();
-
-    if (paidSettings?.is_enabled && paidSettings.price_per_message > 0) {
-      // Check if chat is unlocked
-      const { data: unlock } = await this.supabaseService
-        .from('chat_unlocks')
-        .select('id')
-        .eq('payer_id', senderId)
-        .eq('creator_id', receiverId)
-        .single();
-
-      if (!unlock) {
-        return {
-          allowed: false,
-          reason: 'Payment required to chat with this user',
-          requiresPayment: true,
-          price: paidSettings.price_per_message,
-        };
+        conversationsMap.set(partnerId, {
+          id: partnerId,
+          participant: profile || { user_id: partnerId, username: 'user', avatar_url: null, badge_type: 'none' },
+          last_message: {
+            content: msg.content,
+            created_at: msg.created_at,
+          },
+        });
       }
     }
 
-    return { allowed: true };
+    return Array.from(conversationsMap.values());
   }
 
-  async saveMessage(data: SendMessageDto) {
-    const { data: message, error } = await this.supabaseService
-      .from('messages')
-      .insert({
-        sender_id: data.senderId,
-        receiver_id: data.receiverId,
-        encrypted_message: data.encryptedMessage,
-        media_url: data.mediaUrl,
-        message_type: data.messageType || 'text',
-        is_paid: data.isPaid || false,
-      })
-      .select(`
-        *,
-        sender:profiles!sender_id (username, avatar_url),
-        receiver:profiles!receiver_id (username, avatar_url)
-      `)
-      .single();
-
-    if (error) {
-      throw new Error('Failed to save message');
-    }
-
-    return message;
-  }
-
-  async getConversation(userId: string, otherUserId: string, page: number = 1, limit: number = 50) {
+  async getConversation(userId: string, partnerId: string, page: number = 1, limit: number = 50) {
     const offset = (page - 1) * limit;
 
     const { data: messages, error } = await this.supabaseService
       .from('messages')
       .select('*')
-      .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
-      .order('created_at', { ascending: false })
+      .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
+      .order('created_at', { ascending: true })
       .range(offset, offset + limit - 1);
 
     if (error) {
-      throw new Error('Failed to get conversation');
-    }
-
-    return messages?.reverse() || [];
-  }
-
-  async getConversations(userId: string) {
-    // Get all unique conversations with latest message
-    const { data: messages, error } = await this.supabaseService
-      .from('messages')
-      .select('*')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to get conversations:', error);
+      console.error('Get conversation error:', error);
       return [];
     }
 
-    if (!messages || messages.length === 0) {
-      return [];
-    }
-
-    // Group by conversation partner
-    const conversations = new Map();
-    
-    for (const msg of messages) {
-      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-      
-      if (!conversations.has(partnerId)) {
-        conversations.set(partnerId, {
-          partnerId,
-          partner: { username: 'Unknown', avatar_url: null },
-          lastMessage: msg,
-          unreadCount: 0,
-        });
-      }
-      
-      // Count unread
-      if (msg.receiver_id === userId && !msg.is_read) {
-        conversations.get(partnerId).unreadCount++;
-      }
-    }
-
-    return Array.from(conversations.values());
-  }
-
-  async markMessagesAsRead(userId: string, senderId: string) {
-    const { error } = await this.supabaseService
+    // Mark messages as read
+    await this.supabaseService
       .from('messages')
-      .update({ is_read: true })
+      .update({ read: true })
+      .eq('sender_id', partnerId)
       .eq('receiver_id', userId)
-      .eq('sender_id', senderId)
-      .eq('is_read', false);
+      .eq('read', false);
 
-    if (error) {
-      throw new Error('Failed to mark messages as read');
-    }
-
-    return { message: 'Messages marked as read' };
+    return messages || [];
   }
 
-  async blockUser(blockerId: string, blockedId: string) {
-    const { error } = await this.supabaseService
-      .from('blocks')
+  async sendMessage(senderId: string, receiverId: string, content: string, mediaUrl?: string) {
+    const { data, error } = await this.supabaseService
+      .from('messages')
       .insert({
-        blocker_id: blockerId,
-        blocked_id: blockedId,
-        is_nuclear: false,
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content,
+        media_url: mediaUrl,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Send message error:', error);
+      throw new Error('Failed to send message');
+    }
+
+    // Get sender name for notification
+    const { data: senderProfile } = await this.supabaseService
+      .from('profiles')
+      .select('username')
+      .eq('user_id', senderId)
+      .single();
+
+    // Send notification
+    await this.notificationsService.notifyMessage(receiverId, senderProfile?.username || 'Someone');
+
+    return data;
+  }
+
+  async startConversation(userId: string, partnerId: string) {
+    // Check if there's existing conversation
+    const { data: existing } = await this.supabaseService
+      .from('messages')
+      .select('id')
+      .or(`and(sender_id.eq.${userId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${userId})`)
+      .limit(1);
+
+    // Get partner profile
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('user_id, username, avatar_url, badge_type')
+      .eq('user_id', partnerId)
+      .single();
+
+    if (!profile) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: partnerId,
+      participant: profile,
+      last_message: null,
+    };
+  }
+
+  async blockUser(userId: string, blockedId: string) {
+    const { error } = await this.supabaseService
+      .from('blocked_users')
+      .insert({
+        user_id: userId,
+        blocked_user_id: blockedId,
       });
 
     if (error) {
+      // Check if it's a duplicate key error (already blocked)
+      if (error.code === '23505') {
+        return { message: 'User already blocked' };
+      }
       throw new Error('Failed to block user');
     }
 
-    return { message: 'User blocked' };
+    return { message: 'User blocked successfully' };
   }
 
-  async nuclearBlock(blockerId: string, blockedId: string) {
+  async nuclearBlock(userId: string, blockedId: string) {
+    // Block the user
+    await this.blockUser(userId, blockedId);
+
     // Delete all messages between users
-    const { error: deleteError } = await this.supabaseService
+    await this.supabaseService
       .from('messages')
       .delete()
-      .or(`and(sender_id.eq.${blockerId},receiver_id.eq.${blockedId}),and(sender_id.eq.${blockedId},receiver_id.eq.${blockerId})`);
+      .or(`and(sender_id.eq.${userId},receiver_id.eq.${blockedId}),and(sender_id.eq.${blockedId},receiver_id.eq.${userId})`);
 
-    if (deleteError) {
-      throw new Error('Failed to delete messages');
-    }
+    // Unfollow each other
+    await this.supabaseService
+      .from('followers')
+      .delete()
+      .or(`and(follower_id.eq.${userId},following_id.eq.${blockedId}),and(follower_id.eq.${blockedId},following_id.eq.${userId})`);
 
-    // Create nuclear block
-    const { error: blockError } = await this.supabaseService
-      .from('blocks')
-      .insert({
-        blocker_id: blockerId,
-        blocked_id: blockedId,
-        is_nuclear: true,
-      });
-
-    if (blockError) {
-      throw new Error('Failed to create nuclear block');
-    }
-
-    return { message: 'Nuclear block activated - all messages deleted' };
+    return { message: 'User blocked and all interactions removed' };
   }
 
-  async unblockUser(blockerId: string, blockedId: string) {
+  async unblockUser(userId: string, blockedId: string) {
     const { error } = await this.supabaseService
-      .from('blocks')
+      .from('blocked_users')
       .delete()
-      .eq('blocker_id', blockerId)
-      .eq('blocked_id', blockedId);
+      .eq('user_id', userId)
+      .eq('blocked_user_id', blockedId);
 
-    if (error) {
-      throw new Error('Failed to unblock user');
-    }
-
+    if (error) throw new Error('Failed to unblock user');
     return { message: 'User unblocked' };
   }
 
   async setPaidChatSettings(userId: string, price: number, enabled: boolean) {
-    const { data, error } = await this.supabaseService
+    const { error } = await this.supabaseService
       .from('paid_chat_settings')
       .upsert({
         user_id: userId,
         price_per_message: price,
         is_enabled: enabled,
-      })
-      .select()
-      .single();
+      });
 
-    if (error) {
-      throw new Error('Failed to update paid chat settings');
-    }
-
-    return data;
+    if (error) throw new Error('Failed to update settings');
+    return { message: 'Settings updated' };
   }
 
-  async unlockChat(payerId: string, creatorId: string, amount: number, paymentId: string) {
-    const { data, error } = await this.supabaseService
+  async unlockChat(userId: string, creatorId: string, amount: number, paymentId: string) {
+    // Check if payment is valid
+    // TODO: Implement payment verification
+    
+    // Create unlock record
+    const { error } = await this.supabaseService
       .from('chat_unlocks')
       .insert({
-        payer_id: payerId,
+        user_id: userId,
         creator_id: creatorId,
         amount,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error('Failed to unlock chat');
-    }
-
-    // Record transaction
-    await this.supabaseService.from('transactions').insert({
-      user_id: payerId,
-      amount,
-      type: 'chat',
-      status: 'completed',
-      razorpay_payment_id: paymentId,
-    });
-
-    return data;
-  }
-
-  async triggerAutoReply(userId: string, senderId: string, messageId: string) {
-    // Check if auto-reply is enabled
-    const { data: automation } = await this.supabaseService
-      .from('ai_automations')
-      .select('*')
-      .eq('business_id', userId)
-      .eq('type', 'auto_reply')
-      .eq('is_active', true)
-      .single();
-
-    if (!automation) return;
-
-    // Generate AI reply
-    const reply = await this.aiService.generateAutoReply(automation.prompt_template);
-
-    if (reply) {
-      // Save auto-reply
-      await this.saveMessage({
-        senderId: userId,
-        receiverId: senderId,
-        encryptedMessage: reply,
-        messageType: 'text',
+        payment_id: paymentId,
       });
-    }
+
+    if (error) throw new Error('Failed to unlock chat');
+    return { message: 'Chat unlocked' };
   }
 
   async deleteMessage(userId: string, messageId: string) {
@@ -296,7 +219,7 @@ export class ChatService {
       .single();
 
     if (!message || message.sender_id !== userId) {
-      throw new ForbiddenException('Not authorized to delete this message');
+      throw new Error('Not authorized to delete this message');
     }
 
     const { error } = await this.supabaseService
@@ -304,10 +227,7 @@ export class ChatService {
       .delete()
       .eq('id', messageId);
 
-    if (error) {
-      throw new Error('Failed to delete message');
-    }
-
+    if (error) throw new Error('Failed to delete message');
     return { message: 'Message deleted' };
   }
 }

@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePostDto } from './dto/create-post.dto';
 
 @Injectable()
 export class PostsService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private supabaseService: SupabaseService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async createPost(userId: string, createPostDto: CreatePostDto) {
     const insertData: any = {
@@ -261,6 +265,23 @@ export class PostsService {
       .update({ likes_count: 1 })
       .eq('id', postId);
 
+    // Get post owner and liker info for notification
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post && post.user_id !== userId) {
+      const { data: likerProfile } = await this.supabaseService
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userId)
+        .single();
+
+      await this.notificationsService.notifyLike(post.user_id, likerProfile?.username || 'Someone', postId);
+    }
+
     return { message: 'Post liked' };
   }
 
@@ -314,6 +335,23 @@ export class PostsService {
       .from('posts')
       .update({ comments_count: 1 })
       .eq('id', postId);
+
+    // Get post owner and commenter info for notification
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post && post.user_id !== userId) {
+      const { data: commenterProfile } = await this.supabaseService
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userId)
+        .single();
+
+      await this.notificationsService.notifyComment(post.user_id, commenterProfile?.username || 'Someone', postId);
+    }
 
     return data;
   }

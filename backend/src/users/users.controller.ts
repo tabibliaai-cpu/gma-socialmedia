@@ -54,6 +54,12 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('check-follow/:userId')
+  async checkFollowStatus(@Request() req, @Param('userId') userId: string) {
+    return this.usersService.checkFollowStatus(req.user.id, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('share-link')
   async createShareLink(@Request() req) {
     return this.usersService.createShareLink(req.user.id);

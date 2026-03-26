@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePrivacyDto } from './dto/update-privacy.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UsersService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private supabaseService: SupabaseService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async getProfile(userId: string) {
     const { data: user, error } = await this.supabaseService
@@ -171,6 +175,15 @@ export class UsersService {
     await this.supabaseService.rpc('increment_followers', { user_id: followingId });
     await this.supabaseService.rpc('increment_following', { user_id: followerId });
 
+    // Get follower info for notification
+    const { data: followerProfile } = await this.supabaseService
+      .from('profiles')
+      .select('username')
+      .eq('user_id', followerId)
+      .single();
+
+    await this.notificationsService.notifyFollow(followingId, followerProfile?.username || 'Someone');
+
     return { message: 'Followed successfully' };
   }
 
@@ -252,6 +265,17 @@ export class UsersService {
     }
 
     return data;
+  }
+
+  async checkFollowStatus(followerId: string, followingId: string) {
+    const { data } = await this.supabaseService
+      .from('followers')
+      .select('id')
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId)
+      .single();
+
+    return { isFollowing: !!data };
   }
 
   async createShareLink(userId: string) {

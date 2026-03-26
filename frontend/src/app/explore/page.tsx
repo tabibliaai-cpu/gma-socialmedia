@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MainLayout from '@/components/MainLayout';
 import { searchAPI, usersAPI } from '@/lib/api';
 import Link from 'next/link';
 import { Search, TrendingUp, User, Hash, ArrowLeft } from 'lucide-react';
 
-export default function ExplorePage() {
+function ExplorePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('for-you');
@@ -292,6 +292,14 @@ export default function ExplorePage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div></div>}>
+      <ExplorePageContent />
+    </Suspense>
   );
 }
 
