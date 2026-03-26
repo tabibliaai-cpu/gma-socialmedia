@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { chatAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -27,8 +28,9 @@ interface Conversation {
   };
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedChat, setSelectedChat] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -41,6 +43,14 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    // Check if we need to open a specific user's chat from URL
+    const userId = searchParams.get('user');
+    if (userId && conversations.length >= 0) {
+      startChatWithUser(userId);
+    }
+  }, [searchParams, conversations]);
+
+  useEffect(() => {
     if (selectedChat) {
       loadMessages(selectedChat.participant.id);
     }
@@ -49,6 +59,24 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const startChatWithUser = async (userId: string) => {
+    // Check if conversation already exists
+    const existing = conversations.find(c => c.participant.id === userId);
+    if (existing) {
+      setSelectedChat(existing);
+      return;
+    }
+    
+    // Start new conversation
+    try {
+      const { data } = await chatAPI.startConversation(userId);
+      setSelectedChat(data);
+      loadConversations();
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+    }
+  };
 
   const loadConversations = async () => {
     try {
@@ -229,5 +257,13 @@ export default function ChatPage() {
         </main>
       </div>
     </MainLayout>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div></div>}>
+      <ChatPageContent />
+    </Suspense>
   );
 }

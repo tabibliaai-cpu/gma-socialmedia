@@ -8,8 +8,10 @@ import { Bell, Heart, MessageCircle, UserPlus, Verified, Repeat2 } from 'lucide-
 interface Notification {
   id: string;
   type: string;
+  title?: string;
   content: string;
   read: boolean;
+  is_read?: boolean;
   created_at: string;
   actor?: {
     username: string;
@@ -28,6 +30,7 @@ export default function NotificationsPage() {
   const loadNotifications = async () => {
     try {
       const { data } = await notificationsAPI.getAll();
+      setNotifications((data || []).map((n: any) => ({ ...n, read: n.read ?? n.is_read ?? false })));
       setNotifications(data || []);
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -136,7 +139,10 @@ export default function NotificationsPage() {
                       {notification.actor?.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                   </div>
-                  <p className="text-white">{notification.content}</p>
+                  <p className="text-white font-medium">{notification.title || notification.content}</p>
+                  {notification.title && notification.content && (
+                    <p className="text-[#71767b] text-sm mt-1">{notification.content}</p>
+                  )}
                   <p className="text-[#71767b] text-sm mt-1">{formatTime(notification.created_at)}</p>
                 </div>
               </div>
