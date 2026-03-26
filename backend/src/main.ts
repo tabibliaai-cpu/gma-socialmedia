@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  
+
   // Enable CORS for all origins
   app.enableCors({
     origin: true,
@@ -26,7 +26,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = configService.get('PORT') || 3001;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Backend running on port ${port}`);
 }
 
