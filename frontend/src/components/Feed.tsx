@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { postsAPI } from '@/lib/api';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark, Sparkles, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Post {
@@ -20,6 +20,8 @@ interface Post {
   is_liked?: boolean;
   is_bookmarked?: boolean;
   is_ad?: boolean;
+  type?: 'post' | 'ad' | 'article';
+  ad_link?: string;
   profiles?: {
     username: string;
     avatar_url: string;
@@ -264,14 +266,20 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
       {posts.map((post, index) => {
         const profile = post.profiles;
         const username = profile?.username || 'user';
-        const isVerified = profile?.badge_type && profile.badge_type !== 'none';
+        const badgeType = profile?.badge_type || 'none';
+        const isPremium = badgeType === 'premium';
+        const isBusiness = badgeType === 'business';
+        const isVerified = badgeType !== 'none';
+        
         const content = post.caption || post.content || '';
         const isAnimating = animatingPost === post.id;
+        const isAd = post.type === 'ad' || post.is_ad;
+        const isArticle = post.type === 'article';
 
         return (
           <article 
             key={post.id} 
-            className="p-4 hover:bg-[#181836]/50 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+            className={`p-4 hover:bg-[#181836]/50 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-[#1d9bf0]/5' : ''}`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <div className="flex gap-3">
@@ -289,12 +297,33 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   <Link href={`/profile/${username}`} className="font-bold text-white hover:underline">
                     {username}
                   </Link>
-                  {isVerified && (
+                  
+                  {/* Master Plan: Subscription Badges */}
+                  {isPremium && (
+                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" title="Premium Verified" />
+                  )}
+                  {isBusiness && (
+                    <Verified className="w-4 h-4 text-[#ffd700] fill-[#ffd700]" title="Business Verified" />
+                  )}
+                  {isVerified && !isPremium && !isBusiness && (
                     <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
                   )}
+
                   <span className="text-[#71767b]">@{username}</span>
                   <span className="text-[#71767b]">·</span>
                   <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
+
+                  {/* Master Plan: Ad & Article Labels */}
+                  {isAd && (
+                    <span className="ml-2 text-xs border border-[#71767b] text-[#71767b] px-1.5 py-0.5 rounded">
+                      Sponsored
+                    </span>
+                  )}
+                  {isArticle && (
+                    <span className="ml-2 text-xs bg-[#7856ff]/20 text-[#7856ff] px-2 py-0.5 rounded-full">
+                      Article
+                    </span>
+                  )}
                   
                   {/* Three-dot Menu */}
                   <div className="ml-auto relative" ref={menuRef}>
@@ -343,10 +372,20 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                   </div>
                 </div>
 
-                {/* Caption */}
-                <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
-                  {content}
-                </p>
+                {/* Caption / Article Preview */}
+                {isArticle ? (
+                  <div className="mt-2 p-4 border border-[#2f3336] rounded-xl bg-[#151515]">
+                     <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
+                     <p className="text-[#71767b] line-clamp-3">{post.content}</p>
+                     <Link href={`/article/${post.id}`} className="text-[#1d9bf0] text-sm mt-2 inline-block hover:underline">
+                       Read full article
+                     </Link>
+                  </div>
+                ) : (
+                  <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
+                    {content}
+                  </p>
+                )}
 
                 {/* Media */}
                 {post.media_url && (
@@ -357,6 +396,13 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                       <img src={post.media_url} alt="" className="w-full max-h-96 object-cover" />
                     )}
                   </div>
+                )}
+
+                {/* Master Plan: Ad Link Button */}
+                {isAd && post.ad_link && (
+                  <a href={post.ad_link} target="_blank" rel="noopener noreferrer" className="mt-3 w-full block text-center bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 py-2 rounded-full font-bold transition-colors flex items-center justify-center gap-2">
+                    Learn More <ExternalLink className="w-4 h-4" />
+                  </a>
                 )}
 
                 {/* Actions */}
