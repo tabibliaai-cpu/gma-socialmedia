@@ -185,9 +185,7 @@ export const aiAPI = {
 
 // Affiliates API
 export const affiliatesAPI = {
-  // UPGRADED: Now only requires the username, the backend handles the rest!
   create: (data: { username: string }) => api.post('/affiliates', data),
-  
   getBusinessAffiliates: () => api.get('/affiliates'),
   getUserAffiliates: () => api.get('/affiliates/mine'),
   remove: (id: string) => api.delete(`/affiliates/${id}`),
