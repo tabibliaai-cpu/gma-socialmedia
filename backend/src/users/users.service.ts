@@ -19,25 +19,20 @@ export class UsersService {
       .eq('id', userId)
       .single();
 
-    if (error || !user) {
-      throw new NotFoundException('User not found');
-    }
+    if (error || !user) throw new NotFoundException('User not found');
 
-    // Get profile separately
     const { data: profile } = await this.supabaseService
       .from('profiles')
       .select('username, bio, avatar_url, badge_type, followers_count, following_count')
       .eq('user_id', userId)
       .single();
 
-    // Get privacy settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
       .select('name_visibility, dm_permission, search_visibility')
       .eq('user_id', userId)
       .single();
 
-    // Get paid chat settings
     const { data: paidChat } = await this.supabaseService
       .from('paid_chat_settings')
       .select('price_per_message, is_enabled')
@@ -53,39 +48,44 @@ export class UsersService {
   }
 
   async getPublicProfile(username: string) {
-    // Get profile by username
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
       .select('user_id, username, name, bio, avatar_url, cover_url, badge_type, followers_count, following_count, website, location, profession')
       .eq('username', username)
       .single();
 
-    if (error || !profile) {
-      throw new NotFoundException('User not found');
-    }
+    if (error || !profile) throw new NotFoundException('User not found');
 
-    // Get user role separately
     const { data: user } = await this.supabaseService
       .from('users')
       .select('role, created_at')
       .eq('id', profile.user_id)
       .single();
 
-    // Check privacy settings
+    // Fetch Privacy Settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
-      .select('search_visibility')
+      .select('name_visibility, dm_permission, search_visibility')
       .eq('user_id', profile.user_id)
       .single();
 
+    // 1. SEARCH VISIBILITY RULE
     if (privacy?.search_visibility === 'hidden') {
       throw new NotFoundException('User not found');
+    }
+
+    // 2. NAME VISIBILITY RULE
+    if (privacy?.name_visibility === 'none' || privacy?.name_visibility === 'selected') {
+      // Master Plan rule: If hidden, show username instead of real name
+      profile.name = profile.username; 
     }
 
     return {
       ...profile,
       role: user?.role,
       created_at: user?.created_at,
+      // 3. DM PERMISSION RULE: Sent to frontend so it knows whether to hide the "Message" button
+      dm_permission: privacy?.dm_permission || 'everyone'
     };
   }
 
@@ -93,7 +93,6 @@ export class UsersService {
     const updateData: any = {};
 
     if (updateProfileDto.username) {
-      // Check if username is taken
       const { data: existing } = await this.supabaseService
         .from('profiles')
         .select('user_id')
@@ -101,39 +100,17 @@ export class UsersService {
         .neq('user_id', userId)
         .single();
 
-      if (existing) {
-        throw new BadRequestException('Username already taken');
-      }
+      if (existing) throw new BadRequestException('Username already taken');
       updateData.username = updateProfileDto.username;
     }
 
-    if (updateProfileDto.name !== undefined) {
-      updateData.name = updateProfileDto.name;
-    }
-
-    if (updateProfileDto.bio !== undefined) {
-      updateData.bio = updateProfileDto.bio;
-    }
-
-    if (updateProfileDto.avatar_url !== undefined) {
-      updateData.avatar_url = updateProfileDto.avatar_url;
-    }
-
-    if (updateProfileDto.cover_url !== undefined) {
-      updateData.cover_url = updateProfileDto.cover_url;
-    }
-
-    if (updateProfileDto.website !== undefined) {
-      updateData.website = updateProfileDto.website;
-    }
-
-    if (updateProfileDto.location !== undefined) {
-      updateData.location = updateProfileDto.location;
-    }
-
-    if (updateProfileDto.profession !== undefined) {
-      updateData.profession = updateProfileDto.profession;
-    }
+    if (updateProfileDto.name !== undefined) updateData.name = updateProfileDto.name;
+    if (updateProfileDto.bio !== undefined) updateData.bio = updateProfileDto.bio;
+    if (updateProfileDto.avatar_url !== undefined) updateData.avatar_url = updateProfileDto.avatar_url;
+    if (updateProfileDto.cover_url !== undefined) updateData.cover_url = updateProfileDto.cover_url;
+    if (updateProfileDto.website !== undefined) updateData.website = updateProfileDto.website;
+    if (updateProfileDto.location !== undefined) updateData.location = updateProfileDto.location;
+    if (updateProfileDto.profession !== undefined) updateData.profession = updateProfileDto.profession;
 
     const { data, error } = await this.supabaseService
       .from('profiles')
@@ -142,34 +119,24 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) {
-      throw new Error('Failed to update profile');
-    }
-
+    if (error) throw new Error('Failed to update profile');
     return data;
   }
 
   async updatePrivacy(userId: string, updatePrivacyDto: UpdatePrivacyDto) {
     const { data, error } = await this.supabaseService
       .from('privacy_settings')
-      .update(updatePrivacyDto)
-      .eq('user_id', userId)
+      .upsert({ user_id: userId, ...updatePrivacyDto }) // Use upsert in case row doesn't exist yet
       .select()
       .single();
 
-    if (error) {
-      throw new Error('Failed to update privacy settings');
-    }
-
+    if (error) throw new Error('Failed to update privacy settings');
     return data;
   }
 
   async followUser(followerId: string, followingId: string) {
-    if (followerId === followingId) {
-      throw new BadRequestException('Cannot follow yourself');
-    }
+    if (followerId === followingId) throw new BadRequestException('Cannot follow yourself');
 
-    // Check if already following
     const { data: existing } = await this.supabaseService
       .from('followers')
       .select('id')
@@ -177,25 +144,18 @@ export class UsersService {
       .eq('following_id', followingId)
       .single();
 
-    if (existing) {
-      throw new BadRequestException('Already following this user');
-    }
+    if (existing) throw new BadRequestException('Already following this user');
 
-    // Create follow relationship
     const { error } = await this.supabaseService.from('followers').insert({
       follower_id: followerId,
       following_id: followingId,
     });
 
-    if (error) {
-      throw new Error('Failed to follow user');
-    }
+    if (error) throw new Error('Failed to follow user');
 
-    // Update counts
     await this.supabaseService.rpc('increment_followers', { user_id: followingId });
     await this.supabaseService.rpc('increment_following', { user_id: followerId });
 
-    // Get follower info for notification
     const { data: followerProfile } = await this.supabaseService
       .from('profiles')
       .select('username')
@@ -203,7 +163,6 @@ export class UsersService {
       .single();
 
     await this.notificationsService.notifyFollow(followingId, followerProfile?.username || 'Someone');
-
     return { message: 'Followed successfully' };
   }
 
@@ -214,11 +173,8 @@ export class UsersService {
       .eq('follower_id', followerId)
       .eq('following_id', followingId);
 
-    if (error) {
-      throw new Error('Failed to unfollow user');
-    }
+    if (error) throw new Error('Failed to unfollow user');
 
-    // Update counts
     await this.supabaseService.rpc('decrement_followers', { user_id: followingId });
     await this.supabaseService.rpc('decrement_following', { user_id: followerId });
 
@@ -232,27 +188,14 @@ export class UsersService {
       .eq('username', username)
       .single();
 
-    if (!profile) {
-      throw new NotFoundException('User not found');
-    }
+    if (!profile) throw new NotFoundException('User not found');
 
     const { data, error } = await this.supabaseService
       .from('followers')
-      .select(`
-        follower_id,
-        created_at,
-        profiles!followers_follower_id_fkey (
-          username,
-          avatar_url,
-          badge_type
-        )
-      `)
+      .select(`follower_id, created_at, profiles!followers_follower_id_fkey (username, avatar_url, badge_type)`)
       .eq('following_id', profile.user_id);
 
-    if (error) {
-      throw new Error('Failed to get followers');
-    }
-
+    if (error) throw new Error('Failed to get followers');
     return data;
   }
 
@@ -263,27 +206,14 @@ export class UsersService {
       .eq('username', username)
       .single();
 
-    if (!profile) {
-      throw new NotFoundException('User not found');
-    }
+    if (!profile) throw new NotFoundException('User not found');
 
     const { data, error } = await this.supabaseService
       .from('followers')
-      .select(`
-        following_id,
-        created_at,
-        profiles!followers_following_id_fkey (
-          username,
-          avatar_url,
-          badge_type
-        )
-      `)
+      .select(`following_id, created_at, profiles!followers_following_id_fkey (username, avatar_url, badge_type)`)
       .eq('follower_id', profile.user_id);
 
-    if (error) {
-      throw new Error('Failed to get following');
-    }
-
+    if (error) throw new Error('Failed to get following');
     return data;
   }
 
@@ -294,28 +224,20 @@ export class UsersService {
       .eq('follower_id', followerId)
       .eq('following_id', followingId)
       .single();
-
     return { isFollowing: !!data };
   }
 
   async createShareLink(userId: string) {
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Master Plan: 5 minutes expiry
 
     const { data, error } = await this.supabaseService
       .from('share_links')
-      .insert({
-        user_id: userId,
-        token,
-        expires_at: expiresAt.toISOString(),
-      })
+      .insert({ user_id: userId, token, expires_at: expiresAt.toISOString() })
       .select()
       .single();
 
-    if (error) {
-      throw new Error('Failed to create share link');
-    }
-
+    if (error) throw new Error('Failed to create share link');
     return { token, expires_at: expiresAt };
   }
 
@@ -326,19 +248,11 @@ export class UsersService {
       .eq('token', token)
       .single();
 
-    if (linkError || !link) {
-      throw new NotFoundException('Invalid share link');
-    }
+    if (linkError || !link) throw new NotFoundException('Invalid share link');
+    if (new Date(link.expires_at) < new Date()) throw new BadRequestException('Share link expired');
+    if (link.used) throw new BadRequestException('Share link already used');
 
-    if (new Date(link.expires_at) < new Date()) {
-      throw new BadRequestException('Share link expired');
-    }
-
-    if (link.used) {
-      throw new BadRequestException('Share link already used');
-    }
-
-    // Mark as used
+    // Master Plan: Works only once
     await this.supabaseService
       .from('share_links')
       .update({ used: true })
