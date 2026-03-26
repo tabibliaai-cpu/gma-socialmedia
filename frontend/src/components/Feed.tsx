@@ -1,537 +1,420 @@
-'use client';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { SupabaseService } from '../common/supabase/supabase.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CreatePostDto } from './dto/create-post.dto';
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { postsAPI } from '@/lib/api';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark, Sparkles, Loader2, ExternalLink } from 'lucide-react';
-import toast from 'react-hot-toast';
+@Injectable()
+export class PostsService {
+  constructor(
+    private supabaseService: SupabaseService,
+    private notificationsService: NotificationsService,
+  ) {}
 
-interface Post {
-  id: string;
-  user_id: string;
-  caption: string;
-  content?: string;
-  media_url: string;
-  media_type: string;
-  likes_count: number;
-  comments_count: number;
-  shares_count: number;
-  created_at: string;
-  is_liked?: boolean;
-  is_bookmarked?: boolean;
-  is_ad?: boolean;
-  type?: 'post' | 'ad' | 'article';
-  ad_link?: string;
-  profiles?: {
-    username: string;
-    avatar_url: string;
-    badge_type: string;
-  };
-}
-
-interface FeedProps {
-  tab?: string;
-}
-
-export default function Feed({ tab = 'for-you' }: FeedProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openComments, setOpenComments] = useState<string | null>(null);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [animatingPost, setAnimatingPost] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    loadPosts();
-  }, [tab]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null);
-      }
+  async createPost(userId: string, createPostDto: CreatePostDto) {
+    const insertData: any = {
+      user_id: userId,
+      content: createPostDto.caption,
+      caption: createPostDto.caption,
+      likes_count: 0,
+      comments_count: 0,
+      shares_count: 0,
+      created_at: new Date().toISOString(),
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const loadPosts = async () => {
-    setLoading(true);
-    setPosts([]);
-    try {
-      const { data } = await postsAPI.getFeed();
-      // Animate posts in one by one
-      for (let i = 0; i < (data || []).length; i++) {
-        setTimeout(() => {
-          setPosts(prev => [...prev, data[i]]);
-        }, i * 50);
-      }
-    } catch (error) {
-      console.error('Failed to load posts:', error);
-    } finally {
-      setTimeout(() => setLoading(false), 300);
+    if (createPostDto.media_url) insertData.media_url = createPostDto.media_url;
+    if (createPostDto.media_type) insertData.media_type = createPostDto.media_type;
+
+    const { data, error } = await this.supabaseService
+      .from('posts')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create post error:', error);
+      throw new Error(`Failed to create post: ${error.message}`);
     }
-  };
 
-  const handleLike = async (postId: string, isLiked: boolean) => {
-    // Optimistic update with animation
-    setAnimatingPost(postId);
-    setTimeout(() => setAnimatingPost(null), 500);
-    
-    setPosts(posts.map(p => {
-      if (p.id === postId) {
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username, avatar_url, badge_type')
+      .eq('user_id', userId)
+      .single();
+
+    return { ...data, profiles: profile };
+  }
+
+  async getFeed(userId: string, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
+
+    let followingIds: string[] = [userId];
+    try {
+      const { data: following } = await this.supabaseService
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', userId);
+
+      if (following && following.length > 0) {
+        followingIds = [...followingIds, ...following.map(f => f.following_id)];
+      }
+    } catch (e) {
+      console.log('Followers query failed, showing all posts');
+    }
+
+    const { data: posts, error } = await this.supabaseService
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Get feed error:', error);
+      if (error.code === '42P01') return [];
+      throw new Error(`Failed to get feed: ${error.message}`);
+    }
+
+    // Explicitly type as any[] to allow mixing Posts and Ads
+    let postsWithProfiles: any[] = await Promise.all(
+      (posts || []).map(async (post) => {
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('username, avatar_url, badge_type')
+          .eq('user_id', post.user_id)
+          .single();
+
         return {
-          ...p,
-          likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1,
-          is_liked: !isLiked,
+          ...post,
+          type: 'post', // Explicitly label as post
+          profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
+          likes_count: post.likes_count || 0,
+          comments_count: post.comments_count || 0,
         };
-      }
-      return p;
-    }));
-    
-    try {
-      if (isLiked) {
-        await postsAPI.unlike(postId);
-      } else {
-        await postsAPI.like(postId);
-      }
-    } catch (error) {
-      // Revert on error
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return {
-            ...p,
-            likes_count: isLiked ? p.likes_count + 1 : Math.max(0, p.likes_count - 1),
-            is_liked: isLiked,
-          };
-        }
-        return p;
-      }));
-      toast.error('Failed to like post');
-    }
-  };
-
-  const handleRetweet = async (postId: string) => {
-    try {
-      await postsAPI.share(postId);
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, shares_count: (p.shares_count || 0) + 1 };
-        }
-        return p;
-      }));
-      toast.success('Post shared!');
-    } catch (error) {
-      toast.error('Failed to share post');
-    }
-  };
-
-  const handleBookmark = async (postId: string, isBookmarked: boolean) => {
-    try {
-      if (isBookmarked) {
-        await postsAPI.unbookmark(postId);
-        toast.success('Removed from bookmarks');
-      } else {
-        await postsAPI.bookmark(postId);
-        toast.success('Added to bookmarks');
-      }
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, is_bookmarked: !isBookmarked };
-        }
-        return p;
-      }));
-    } catch (error) {
-      toast.error('Failed to update bookmark');
-    }
-  };
-
-  const handleShare = async (postId: string) => {
-    try {
-      const url = `${window.location.origin}/post/${postId}`;
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to copy link');
-    }
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-    try {
-      await postsAPI.delete(postId);
-      setPosts(posts.filter(p => p.id !== postId));
-      toast.success('Post deleted');
-    } catch (error) {
-      toast.error('Failed to delete post');
-    }
-    setOpenMenuId(null);
-  };
-
-  const handleCopyText = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Text copied!');
-    setOpenMenuId(null);
-  };
-
-  const loadComments = async (postId: string) => {
-    try {
-      const { data } = await postsAPI.getComments(postId);
-      setComments(data || []);
-    } catch (error) {
-      console.error('Failed to load comments:', error);
-    }
-  };
-
-  const handleAddComment = async (postId: string) => {
-    if (!newComment.trim()) return;
-    try {
-      await postsAPI.addComment(postId, newComment);
-      setNewComment('');
-      loadComments(postId);
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, comments_count: p.comments_count + 1 };
-        }
-        return p;
-      }));
-      toast.success('Comment added');
-    } catch (error) {
-      toast.error('Failed to add comment');
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    if (!dateString) return 'just now';
-    
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);
-      const diffDays = Math.floor(diffHours / 24);
-
-      if (diffMs < 0 || isNaN(diffMs)) return 'just now';
-      if (diffMins < 1) return 'just now';
-      if (diffMins < 60) return `${diffMins}m`;
-      if (diffHours < 24) return `${diffHours}h`;
-      if (diffDays < 7) return `${diffDays}d`;
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch {
-      return 'just now';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#1d9bf0]"></div>
-            <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-[#1d9bf0] animate-pulse" />
-          </div>
-          <p className="text-[#71767b] text-sm">Loading posts...</p>
-        </div>
-      </div>
+      })
     );
-  }
 
-  if (posts.length === 0) {
-    return (
-      <div className="text-center py-20 px-4">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#1d9bf0]/20 to-[#7856ff]/20 flex items-center justify-center">
-          <Sparkles className="w-10 h-10 text-[#1d9bf0]" />
-        </div>
-        <h2 className="text-white text-2xl font-bold mb-2">Your feed is empty</h2>
-        <p className="text-[#71767b] max-w-sm mx-auto">
-          {tab === 'following' 
-            ? "Posts from people you follow will appear here. Start following some creators!"
-            : "Create your first post to get started, or explore trending content!"}
-        </p>
-        <Link 
-          href={tab === 'following' ? '/explore' : '/create/post'}
-          className="mt-6 inline-block px-6 py-2.5 bg-[#1d9bf0] text-white font-bold rounded-full hover:bg-[#1a8cd8] transition-colors"
-        >
-          {tab === 'following' ? 'Explore users' : 'Create post'}
-        </Link>
-      </div>
-    );
-  }
+    // --- AD INTERLEAVING LOGIC ---
+    try {
+      const { data: ads } = await this.supabaseService
+        .from('ads')
+        .select('*')
+        .eq('status', 'active')
+        .limit(Math.ceil(postsWithProfiles.length / 5)); // 1 ad for every 5 posts
 
-  return (
-    <div className="divide-y divide-[#2f3336]">
-      {posts.map((post, index) => {
-        const profile = post.profiles;
-        const username = profile?.username || 'user';
-        const badgeType = profile?.badge_type || 'none';
-        const isPremium = badgeType === 'premium';
-        const isBusiness = badgeType === 'business';
-        const isVerified = badgeType !== 'none';
+      if (ads && ads.length > 0) {
+        const mixedFeed: any[] = [];
+        let adIndex = 0;
         
-        const content = post.caption || post.content || '';
-        const isAnimating = animatingPost === post.id;
-        const isAd = post.type === 'ad' || post.is_ad;
-        const isArticle = post.type === 'article';
+        postsWithProfiles.forEach((post, i) => {
+          mixedFeed.push(post);
+          // Insert an ad every 5 posts
+          if ((i + 1) % 5 === 0 && ads[adIndex]) {
+             const ad = ads[adIndex];
+             mixedFeed.push({
+               id: `ad-${ad.id}`,
+               type: 'ad',
+               caption: ad.content,
+               media_url: ad.media_url,
+               ad_link: ad.target_url,
+               profiles: { username: ad.business_name || 'Sponsored', badge_type: 'business' },
+               created_at: new Date().toISOString(),
+               likes_count: 0,
+               comments_count: 0,
+               shares_count: 0
+             });
+             adIndex++;
+          }
+        });
+        postsWithProfiles = mixedFeed;
+      }
+    } catch (adError) {
+      console.log('Ad injection skipped or failed:', adError.message);
+    }
 
-        return (
-          <article 
-            key={post.id} 
-            className={`p-4 hover:bg-[#181836]/50 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-[#1d9bf0]/5' : ''}`}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div className="flex gap-3">
-              {/* Avatar */}
-              <Link href={`/profile/${username}`} className="shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold">
-                  {username[0].toUpperCase()}
-                </div>
-              </Link>
+    return postsWithProfiles;
+  }
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                {/* Header */}
-                <div className="flex items-center gap-1 text-sm flex-wrap">
-                  <Link href={`/profile/${username}`} className="font-bold text-white hover:underline">
-                    {username}
-                  </Link>
-                  
-                  {/* Master Plan: Subscription Badges */}
-                  {isPremium && (
-                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" title="Premium Verified" />
-                  )}
-                  {isBusiness && (
-                    <Verified className="w-4 h-4 text-[#ffd700] fill-[#ffd700]" title="Business Verified" />
-                  )}
-                  {isVerified && !isPremium && !isBusiness && (
-                    <Verified className="w-4 h-4 text-[#1d9bf0] fill-[#1d9bf0]" />
-                  )}
+  async getExploreFeed(page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
 
-                  <span className="text-[#71767b]">@{username}</span>
-                  <span className="text-[#71767b]">·</span>
-                  <span className="text-[#71767b]">{formatTime(post.created_at)}</span>
+    const { data: posts, error } = await this.supabaseService
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-                  {/* Master Plan: Ad & Article Labels */}
-                  {isAd && (
-                    <span className="ml-2 text-xs border border-[#71767b] text-[#71767b] px-1.5 py-0.5 rounded">
-                      Sponsored
-                    </span>
-                  )}
-                  {isArticle && (
-                    <span className="ml-2 text-xs bg-[#7856ff]/20 text-[#7856ff] px-2 py-0.5 rounded-full">
-                      Article
-                    </span>
-                  )}
-                  
-                  {/* Three-dot Menu */}
-                  <div className="ml-auto relative" ref={menuRef}>
-                    <button 
-                      onClick={() => setOpenMenuId(openMenuId === post.id ? null : post.id)}
-                      className="p-1.5 text-[#71767b] hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] rounded-full transition-colors"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                    
-                    {openMenuId === post.id && (
-                      <div className="absolute right-0 top-8 w-48 bg-black border border-[#2f3336] rounded-xl shadow-lg overflow-hidden z-20">
-                        <button 
-                          onClick={() => handleCopyText(content)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy text
-                        </button>
-                        <button 
-                          onClick={() => handleShare(post.id)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
-                        >
-                          <LinkIcon className="w-4 h-4" />
-                          Copy link to post
-                        </button>
-                        <button 
-                          onClick={() => {
-                            toast('Report feature coming soon', { icon: 'ℹ️' });
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors"
-                        >
-                          <Flag className="w-4 h-4" />
-                          Report post
-                        </button>
-                        <button 
-                          onClick={() => handleDeletePost(post.id)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2f3336]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete post
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+    if (error) {
+      console.error('Get explore feed error:', error);
+      return [];
+    }
 
-                {/* Caption / Article Preview */}
-                {isArticle ? (
-                  <div className="mt-2 p-4 border border-[#2f3336] rounded-xl bg-[#151515]">
-                     <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
-                     <p className="text-[#71767b] line-clamp-3">{post.content}</p>
-                     <Link href={`/article/${post.id}`} className="text-[#1d9bf0] text-sm mt-2 inline-block hover:underline">
-                       Read full article
-                     </Link>
-                  </div>
-                ) : (
-                  <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
-                    {content}
-                  </p>
-                )}
+    const postsWithProfiles = await Promise.all(
+      (posts || []).map(async (post) => {
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('username, avatar_url, badge_type')
+          .eq('user_id', post.user_id)
+          .single();
 
-                {/* Media */}
-                {post.media_url && (
-                  <div className="mt-3 rounded-2xl overflow-hidden border border-[#2f3336]">
-                    {post.media_type === 'video' ? (
-                      <video src={post.media_url} controls className="w-full max-h-96 object-cover" />
-                    ) : (
-                      <img src={post.media_url} alt="" className="w-full max-h-96 object-cover" />
-                    )}
-                  </div>
-                )}
+        return {
+          ...post,
+          type: 'post',
+          profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
+          likes_count: post.likes_count || 0,
+          comments_count: post.comments_count || 0,
+        };
+      })
+    );
 
-                {/* Master Plan: Ad Link Button */}
-                {isAd && post.ad_link && (
-                  <a href={post.ad_link} target="_blank" rel="noopener noreferrer" className="mt-3 w-full block text-center bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 py-2 rounded-full font-bold transition-colors flex items-center justify-center gap-2">
-                    Learn More <ExternalLink className="w-4 h-4" />
-                  </a>
-                )}
+    return postsWithProfiles;
+  }
 
-                {/* Actions */}
-                <div className="flex items-center justify-between mt-3 max-w-md">
-                  {/* Comment */}
-                  <button
-                    onClick={() => {
-                      setOpenComments(openComments === post.id ? null : post.id);
-                      if (openComments !== post.id) loadComments(post.id);
-                    }}
-                    className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
-                  >
-                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
-                      <MessageCircle className="w-4 h-4" />
-                    </div>
-                    <span className="text-sm">{post.comments_count || 0}</span>
-                  </button>
+  async getUserPosts(userId: string, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
 
-                  {/* Retweet */}
-                  <button 
-                    onClick={() => handleRetweet(post.id)}
-                    className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group"
-                  >
-                    <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                      <Repeat2 className="w-4 h-4" />
-                    </div>
-                    <span className="text-sm">{post.shares_count || 0}</span>
-                  </button>
+    const { data: posts, error } = await this.supabaseService
+      .from('posts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-                  {/* Like */}
-                  <button
-                    onClick={() => handleLike(post.id, post.is_liked || false)}
-                    className={`flex items-center gap-1 group ${
-                      post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-full transition-all duration-200 ${
-                      post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
-                    } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
-                      <Heart className={`w-4 h-4 transition-transform duration-200 ${
-                        post.is_liked ? 'fill-pink-500' : ''
-                      } ${isAnimating ? 'scale-110' : ''}`} />
-                    </div>
-                    <span className={`text-sm transition-all duration-200 ${isAnimating ? 'scale-110' : ''}`}>
-                      {post.likes_count || 0}
-                    </span>
-                  </button>
+    if (error) {
+      return [];
+    }
 
-                  {/* Bookmark */}
-                  <button 
-                    onClick={() => handleBookmark(post.id, post.is_bookmarked || false)}
-                    className={`flex items-center gap-1 group ${
-                      post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? 'bg-[#1d9bf0]/10' : 'group-hover:bg-[#1d9bf0]/10'}`}>
-                      <Bookmark className={`w-4 h-4 ${post.is_bookmarked ? 'fill-[#1d9bf0]' : ''}`} />
-                    </div>
-                  </button>
+    const postsWithProfiles = await Promise.all(
+      (posts || []).map(async (post) => {
+        const { data: profile } = await this.supabaseService
+          .from('profiles')
+          .select('username, avatar_url, badge_type')
+          .eq('user_id', post.user_id)
+          .single();
 
-                  {/* Share */}
-                  <button 
-                    onClick={() => handleShare(post.id)}
-                    className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
-                  >
-                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
-                      <Share className="w-4 h-4" />
-                    </div>
-                  </button>
-                </div>
+        return {
+          ...post,
+          type: 'post',
+          profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
+          likes_count: post.likes_count || 0,
+          comments_count: post.comments_count || 0,
+        };
+      })
+    );
 
-                {/* Comments Section */}
-                {openComments === post.id && (
-                  <div className="mt-3 pt-3 border-t border-[#2f3336]">
-                    {/* Add Comment */}
-                    <div className="flex gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] shrink-0 flex items-center justify-center text-white text-xs font-bold">
-                        U
-                      </div>
-                      <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Post your reply"
-                          className="flex-1 px-4 py-2 bg-transparent border border-[#2f3336] rounded-full text-white text-sm placeholder-[#71767b] focus:outline-none focus:border-[#1d9bf0] transition-colors"
-                        />
-                        <button
-                          onClick={() => handleAddComment(post.id)}
-                          disabled={!newComment.trim()}
-                          className="px-4 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-full text-sm transition-colors"
-                        >
-                          Reply
-                        </button>
-                      </div>
-                    </div>
+    return postsWithProfiles;
+  }
 
-                    {/* Comments List */}
-                    {comments.length > 0 ? (
-                      <div className="space-y-3">
-                        {comments.map((comment) => (
-                          <div key={comment.id} className="flex gap-3">
-                            <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white text-xs font-bold">
-                                {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
-                              </div>
-                            </Link>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm">
-                                <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="font-bold text-white hover:underline">
-                                  {comment.profiles?.username || 'user'}
-                                </Link>
-                                <span className="text-white ml-2">{comment.content}</span>
-                              </p>
-                              <p className="text-xs text-[#71767b] mt-0.5">{formatTime(comment.created_at)}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[#71767b] text-sm text-center py-4">No comments yet. Be the first to comment!</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
+  async getPostById(postId: string, userId?: string) {
+    const { data: post, error } = await this.supabaseService
+      .from('posts')
+      .select('*')
+      .eq('id', postId)
+      .single();
+
+    if (error || !post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username, avatar_url, badge_type')
+      .eq('user_id', post.user_id)
+      .single();
+
+    const result: any = { ...post, profiles: profile || null };
+
+    if (userId) {
+      const { data: like } = await this.supabaseService
+        .from('likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .single();
+      result.is_liked = !!like;
+    }
+
+    // Get comments count
+    const { count } = await this.supabaseService
+      .from('comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    result.comments_count = count || 0;
+
+    return result;
+  }
+
+  async updatePost(userId: string, postId: string, updateData: Partial<any>) {
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (!post || post.user_id !== userId) {
+      throw new ForbiddenException('Not authorized to update this post');
+    }
+
+    const { data, error } = await this.supabaseService
+      .from('posts')
+      .update(updateData)
+      .eq('id', postId)
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update post');
+    return data;
+  }
+
+  async deletePost(userId: string, postId: string) {
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (!post || post.user_id !== userId) {
+      throw new ForbiddenException('Not authorized to delete this post');
+    }
+
+    const { error } = await this.supabaseService
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) throw new Error('Failed to delete post');
+    return { message: 'Post deleted successfully' };
+  }
+
+  async likePost(userId: string, postId: string) {
+    const { data: existing } = await this.supabaseService
+      .from('likes')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existing) throw new Error('Already liked this post');
+
+    const { error } = await this.supabaseService
+      .from('likes')
+      .insert({ post_id: postId, user_id: userId });
+
+    if (error) throw new Error('Failed to like post');
+
+    // Increment likes count
+    await this.supabaseService
+      .from('posts')
+      .update({ likes_count: 1 })
+      .eq('id', postId);
+
+    // Get post owner and liker info for notification
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post && post.user_id !== userId) {
+      const { data: likerProfile } = await this.supabaseService
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userId)
+        .single();
+
+      await this.notificationsService.notifyLike(post.user_id, likerProfile?.username || 'Someone', postId);
+    }
+
+    return { message: 'Post liked' };
+  }
+
+  async unlikePost(userId: string, postId: string) {
+    const { error } = await this.supabaseService
+      .from('likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error('Failed to unlike post');
+    return { message: 'Post unliked' };
+  }
+
+  async getComments(postId: string, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
+
+    const { data: comments, error } = await this.supabaseService
+      .from('comments')
+      .select('*, profiles(username, avatar_url, badge_type)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Get comments error:', error);
+      return [];
+    }
+
+    return comments || [];
+  }
+
+  async addComment(userId: string, postId: string, content: string) {
+    const { data, error } = await this.supabaseService
+      .from('comments')
+      .insert({
+        post_id: postId,
+        user_id: userId,
+        content,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Add comment error:', error);
+      throw new Error('Failed to add comment');
+    }
+
+    // Update comments count
+    await this.supabaseService
+      .from('posts')
+      .update({ comments_count: 1 })
+      .eq('id', postId);
+
+    // Get post owner and commenter info for notification
+    const { data: post } = await this.supabaseService
+      .from('posts')
+      .select('user_id')
+      .eq('id', postId)
+      .single();
+
+    if (post && post.user_id !== userId) {
+      const { data: commenterProfile } = await this.supabaseService
+        .from('profiles')
+        .select('username')
+        .eq('user_id', userId)
+        .single();
+
+      await this.notificationsService.notifyComment(post.user_id, commenterProfile?.username || 'Someone', postId);
+    }
+
+    return data;
+  }
+
+  async deleteComment(userId: string, commentId: string) {
+    const { data: comment } = await this.supabaseService
+      .from('comments')
+      .select('user_id, post_id')
+      .eq('id', commentId)
+      .single();
+
+    if (!comment || comment.user_id !== userId) {
+      throw new ForbiddenException('Not authorized to delete this comment');
+    }
+
+    const { error } = await this.supabaseService
+      .from('comments')
+      .delete()
+      .eq('id', commentId);
+
+    if (error) throw new Error('Failed to delete comment');
+    return { message: 'Comment deleted' };
+  }
 }
