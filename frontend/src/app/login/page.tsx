@@ -15,20 +15,36 @@ export default function LoginPage() {
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const { data } = await authAPI.login({ email, password });
+  try {
+    // 1. Call the login API
+    const { data } = await authAPI.login({ email, password });
+    
+    // 2. Validate that we received the token
+    if (data && data.access_token) {
+      // 3. Use the login function from AuthContext to sync state
+      // This sets the token in localStorage and updates the global user state
       login(data.access_token, data.user);
+      
       toast.success('Welcome back!');
+      
+      // 4. Redirect to the feed
       router.push('/feed');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
+    } else {
+      throw new Error('No access token received from server');
     }
-  };
+  } catch (error: any) {
+    // 5. Display the specific error message from the backend
+    // This is now safe because your api.ts interceptor ignores 401s on the login route
+    const errorMessage = error.response?.data?.message || 'Invalid email or password';
+    toast.error(errorMessage);
+    console.error('Login Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
