@@ -73,7 +73,8 @@ export class PostsService {
       throw new Error(`Failed to get feed: ${error.message}`);
     }
 
-    const postsWithProfiles = await Promise.all(
+    // Explicitly type as any[] to allow mixing Posts and Ads
+    let postsWithProfiles: any[] = await Promise.all(
       (posts || []).map(async (post) => {
         const { data: profile } = await this.supabaseService
           .from('profiles')
@@ -83,12 +84,51 @@ export class PostsService {
 
         return {
           ...post,
+          type: 'post', // Explicitly label as post
           profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
           likes_count: post.likes_count || 0,
           comments_count: post.comments_count || 0,
         };
       })
     );
+
+    // --- AD INTERLEAVING LOGIC ---
+    try {
+      const { data: ads } = await this.supabaseService
+        .from('ads')
+        .select('*')
+        .eq('status', 'active')
+        .limit(Math.ceil(postsWithProfiles.length / 5)); // 1 ad for every 5 posts
+
+      if (ads && ads.length > 0) {
+        const mixedFeed: any[] = [];
+        let adIndex = 0;
+        
+        postsWithProfiles.forEach((post, i) => {
+          mixedFeed.push(post);
+          // Insert an ad every 5 posts
+          if ((i + 1) % 5 === 0 && ads[adIndex]) {
+             const ad = ads[adIndex];
+             mixedFeed.push({
+               id: `ad-${ad.id}`,
+               type: 'ad',
+               caption: ad.content,
+               media_url: ad.media_url,
+               ad_link: ad.target_url,
+               profiles: { username: ad.business_name || 'Sponsored', badge_type: 'business' },
+               created_at: new Date().toISOString(),
+               likes_count: 0,
+               comments_count: 0,
+               shares_count: 0
+             });
+             adIndex++;
+          }
+        });
+        postsWithProfiles = mixedFeed;
+      }
+    } catch (adError) {
+      console.log('Ad injection skipped or failed:', adError.message);
+    }
 
     return postsWithProfiles;
   }
@@ -117,6 +157,7 @@ export class PostsService {
 
         return {
           ...post,
+          type: 'post',
           profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
           likes_count: post.likes_count || 0,
           comments_count: post.comments_count || 0,
@@ -151,6 +192,7 @@ export class PostsService {
 
         return {
           ...post,
+          type: 'post',
           profiles: profile || { username: 'user', avatar_url: null, badge_type: 'none' },
           likes_count: post.likes_count || 0,
           comments_count: post.comments_count || 0,
