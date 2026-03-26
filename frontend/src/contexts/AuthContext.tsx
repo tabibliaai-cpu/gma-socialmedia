@@ -30,37 +30,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('token');
       if (token) {
         setToken(token);
-        try {
-          const { data } = await authAPI.getProfile();
-          setUser(data);
-          localStorage.setItem('user', JSON.stringify(data));
-        } catch (profileError: any) {
-          console.log('Profile fetch error:', profileError?.response?.status);
-          if (profileError?.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-          } else {
-            // For other errors, try cached user
-            const cachedUser = localStorage.getItem('user');
-            if (cachedUser) {
-              try { setUser(JSON.parse(cachedUser)); } catch {}
-            }
-          }
-        }
+        const { data } = await authAPI.getProfile();
+        setUser(data);
+        localStorage.setItem('user', JSON.stringify(data));
+      } else {
+        setLoading(false); // No token, stop loading
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } catch (profileError: any) {
+      // If the token is invalid, WIPE EVERYTHING
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
   const login = (token: string, userData: any) => {
+    // Force sync between LocalStorage and the State Store
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setToken(token);
     setUser(userData);
+    
+    // Tiny delay to ensure state is set before redirecting
+    setTimeout(() => {
+      router.push('/feed');
+    }, 100);
   };
 
   const logout = () => {
