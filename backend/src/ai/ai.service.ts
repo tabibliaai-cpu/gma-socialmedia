@@ -12,7 +12,7 @@ export class AiService {
     private supabaseService: SupabaseService,
   ) {
     this.openai = new OpenAI({
-      apiKey: this.configService.get('OPENAI_API_KEY'),
+      apiKey: this.configService.get('OPENAI_API_KEY') || 'sk-dummykeyforlocaldevelopmentonlytoavoidcrashes123',
     });
   }
 
