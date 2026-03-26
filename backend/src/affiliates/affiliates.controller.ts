@@ -10,10 +10,9 @@ export class AffiliatesController {
   @Post()
   async create(
     @Request() req,
-    @Body('userId') userId: string,
-    @Body('badgeLabel') badgeLabel: string,
+    @Body('username') username: string, // Changed from userId to username for better UX
   ) {
-    return this.affiliatesService.createAffiliate(req.user.id, userId, badgeLabel);
+    return this.affiliatesService.createAffiliate(req.user.id, username);
   }
 
   @Get()
@@ -29,15 +28,6 @@ export class AffiliatesController {
   @Delete(':id')
   async remove(@Request() req, @Param('id') id: string) {
     return this.affiliatesService.removeAffiliate(req.user.id, id);
-  }
-
-  @Put(':id/label')
-  async updateLabel(
-    @Request() req,
-    @Param('id') id: string,
-    @Body('label') label: string,
-  ) {
-    return this.affiliatesService.updateBadgeLabel(req.user.id, id, label);
   }
 
   @Post('purchase-slots')
