@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { postsAPI } from '@/lib/api';
 import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark, Sparkles, Loader2, ExternalLink } from 'lucide-react';
@@ -41,6 +42,12 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   const [newComment, setNewComment] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [animatingPost, setAnimatingPost] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editCaption, setEditCaption] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -164,6 +171,22 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
       toast.success('Post deleted');
     } catch (error) {
       toast.error('Failed to delete post');
+    }
+    setOpenMenuId(null);
+  };
+
+  const handleSaveEdit = async (postId: string) => {
+    if (!editCaption.trim()) return;
+    setIsSavingEdit(true);
+    try {
+      await postsAPI.update(postId, { caption: editCaption.trim() });
+      setPosts(posts.map(p => p.id === postId ? { ...p, caption: editCaption.trim() } : p));
+      setEditingPostId(null);
+      toast.success('Post updated');
+    } catch (error) {
+      toast.error('Failed to update post');
+    } finally {
+      setIsSavingEdit(false);
     }
     setOpenMenuId(null);
   };
@@ -362,20 +385,59 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                           <Flag className="w-4 h-4" />
                           Report post
                         </button>
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2f3336]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete post
-                        </button>
+                        {user?.id === post.user_id && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingPostId(post.id);
+                                setEditCaption(post.caption || '');
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-white hover:bg-[#181836] transition-colors border-t border-[#2f3336]"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Edit post
+                            </button>
+                            <button
+                              onClick={() => handleDeletePost(post.id)}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete post
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Caption / Article Preview */}
-                {isArticle ? (
+                {editingPostId === post.id ? (
+                  <div className="mt-2 space-y-3">
+                    <textarea
+                      value={editCaption}
+                      onChange={(e) => setEditCaption(e.target.value)}
+                      className="w-full bg-transparent text-white text-base resize-none focus:outline-none border border-[#1d9bf0] rounded-xl p-3 min-h-[100px]"
+                      placeholder="Edit your post..."
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setEditingPostId(null)}
+                        className="px-4 py-1.5 rounded-full font-bold text-white hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleSaveEdit(post.id)}
+                        disabled={isSavingEdit || !editCaption.trim()}
+                        className="px-4 py-1.5 rounded-full font-bold bg-[#1d9bf0] text-white hover:bg-[#1a8cd8] disabled:opacity-50"
+                      >
+                        {isSavingEdit ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                ) : isArticle ? (
                   <div className="mt-2 p-4 border border-[#2f3336] rounded-xl bg-[#151515]">
                     <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
                     <p className="text-[#71767b] line-clamp-3">{post.content}</p>

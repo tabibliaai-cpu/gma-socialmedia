@@ -144,6 +144,17 @@ export class UsersService {
     return data;
   }
 
+  async updateBusinessSettings(userId: string, data: { auto_reply_enabled: boolean; auto_reply_message: string }) {
+    const { data: updated, error } = await this.supabaseService
+      .from('user_settings')
+      .upsert({ user_id: userId, ...data })
+      .select()
+      .single();
+
+    if (error) throw new Error('Failed to update business settings');
+    return updated;
+  }
+
   async followUser(followerId: string, followingId: string) {
     if (followerId === followingId) throw new BadRequestException('Cannot follow yourself');
 

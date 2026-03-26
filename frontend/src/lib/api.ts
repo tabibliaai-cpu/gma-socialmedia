@@ -198,3 +198,9 @@ export const affiliatesAPI = {
   purchaseSlots: (slots: number, paymentId: string) =>
     api.post('/affiliates/purchase-slots', { slots, paymentId }),
 };
+
+// Business API
+export const businessAPI = {
+  updateSettings: (data: { auto_reply_enabled: boolean; auto_reply_message: string }) =>
+    api.put('/users/business-settings', data),
+};

@@ -153,10 +153,34 @@ export class AuthService {
       .eq('user_id', userId)
       .single();
 
+    // Get paid chat settings
+    let paidChatSettings: any = null;
+    if (user.role === 'creator') {
+      const { data: pc } = await this.supabaseService
+        .from('paid_chat_settings')
+        .select('is_enabled, price_per_message')
+        .eq('user_id', userId)
+        .single();
+      paidChatSettings = pc;
+    }
+
+    // Get business settings
+    let businessSettings: any = null;
+    if (user.role === 'business') {
+      const { data: bs } = await this.supabaseService
+        .from('user_settings')
+        .select('auto_reply_enabled, auto_reply_message')
+        .eq('user_id', userId)
+        .single();
+      businessSettings = bs;
+    }
+
     return {
       ...user,
       profile: profile || null,
       privacy_settings: privacy || null,
+      paid_chat_settings: paidChatSettings,
+      business_settings: businessSettings,
     };
   }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePrivacyDto } from './dto/update-privacy.dto';
@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -29,6 +29,15 @@ export class UsersController {
   @Put('privacy')
   async updatePrivacy(@Request() req, @Body() updatePrivacyDto: UpdatePrivacyDto) {
     return this.usersService.updatePrivacy(req.user.id, updatePrivacyDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('business-settings')
+  async updateBusinessSettings(@Request() req, @Body() body: { auto_reply_enabled: boolean; auto_reply_message: string }) {
+    if (req.user.role !== 'business') {
+      throw new BadRequestException('Only business accounts can configure this');
+    }
+    return this.usersService.updateBusinessSettings(req.user.id, body);
   }
 
   @UseGuards(JwtAuthGuard)
