@@ -69,13 +69,34 @@ export class UsersService {
       .eq('user_id', profile.user_id)
       .single();
 
+    // Fetch Monetization (Paid Chat)
+    let paidChatSettings: any = null;
+    if (user?.role === 'creator') {
+      const { data: pc } = await this.supabaseService
+        .from('paid_chat_settings')
+        .select('price_per_message, is_enabled')
+        .eq('user_id', profile.user_id)
+        .single();
+      paidChatSettings = pc;
+    }
+
+    // Fetch Affiliate Info
+    const { data: affiliates } = await this.supabaseService
+      .from('affiliates')
+      .select('*')
+      .eq('affiliate_id', profile.user_id)
+      .eq('status', 'active');
+
     return {
       ...profile,
       name: profile.username, // Fallback since real 'name' column is missing from DB
       role: user?.role,
       created_at: user?.created_at,
       // 3. DM PERMISSION RULE
-      dm_permission: privacy?.dm_permission || 'everyone'
+      dm_permission: privacy?.dm_permission || 'everyone',
+      // Profile Extras
+      paid_chat_settings: paidChatSettings,
+      affiliates: affiliates || [],
     };
   }
 
