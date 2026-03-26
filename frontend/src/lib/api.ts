@@ -26,13 +26,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        // Always clear dead tokens
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // ONLY force a redirect if we are NOT already on the login or register pages
         const currentPath = window.location.pathname;
+        // ONLY redirect and wipe if NOT on auth pages
         if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
           window.location.href = '/login';
         }
       }
