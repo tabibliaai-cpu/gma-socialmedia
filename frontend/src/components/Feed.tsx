@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { postsAPI } from '@/lib/api';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Verified, Trash2, Flag, Copy, Link as LinkIcon, Bookmark, Sparkles, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Post {
@@ -27,18 +27,23 @@ interface Post {
   };
 }
 
-export default function Feed() {
+interface FeedProps {
+  tab?: string;
+}
+
+export default function Feed({ tab = 'for-you' }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [animatingPost, setAnimatingPost] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadPosts();
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -51,34 +56,57 @@ export default function Feed() {
   }, []);
 
   const loadPosts = async () => {
+    setLoading(true);
+    setPosts([]);
     try {
       const { data } = await postsAPI.getFeed();
-      setPosts(data || []);
+      // Animate posts in one by one
+      for (let i = 0; i < (data || []).length; i++) {
+        setTimeout(() => {
+          setPosts(prev => [...prev, data[i]]);
+        }, i * 50);
+      }
     } catch (error) {
       console.error('Failed to load posts:', error);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 300);
     }
   };
 
   const handleLike = async (postId: string, isLiked: boolean) => {
+    // Optimistic update with animation
+    setAnimatingPost(postId);
+    setTimeout(() => setAnimatingPost(null), 500);
+    
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1,
+          is_liked: !isLiked,
+        };
+      }
+      return p;
+    }));
+    
     try {
       if (isLiked) {
         await postsAPI.unlike(postId);
       } else {
         await postsAPI.like(postId);
       }
+    } catch (error) {
+      // Revert on error
       setPosts(posts.map(p => {
         if (p.id === postId) {
           return {
             ...p,
-            likes_count: isLiked ? Math.max(0, p.likes_count - 1) : p.likes_count + 1,
-            is_liked: !isLiked,
+            likes_count: isLiked ? p.likes_count + 1 : Math.max(0, p.likes_count - 1),
+            is_liked: isLiked,
           };
         }
         return p;
       }));
-    } catch (error) {
       toast.error('Failed to like post');
     }
   };
@@ -198,30 +226,54 @@ export default function Feed() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#1d9bf0]"></div>
+            <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-[#1d9bf0] animate-pulse" />
+          </div>
+          <p className="text-[#71767b] text-sm">Loading posts...</p>
+        </div>
       </div>
     );
   }
 
   if (posts.length === 0) {
     return (
-      <div className="text-center py-20">
-        <p className="text-[#71767b] text-lg">No posts yet</p>
-        <p className="text-[#71767b] text-sm mt-2">Create your first post to get started!</p>
+      <div className="text-center py-20 px-4">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#1d9bf0]/20 to-[#7856ff]/20 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-[#1d9bf0]" />
+        </div>
+        <h2 className="text-white text-2xl font-bold mb-2">Your feed is empty</h2>
+        <p className="text-[#71767b] max-w-sm mx-auto">
+          {tab === 'following' 
+            ? "Posts from people you follow will appear here. Start following some creators!"
+            : "Create your first post to get started, or explore trending content!"}
+        </p>
+        <Link 
+          href={tab === 'following' ? '/explore' : '/create/post'}
+          className="mt-6 inline-block px-6 py-2.5 bg-[#1d9bf0] text-white font-bold rounded-full hover:bg-[#1a8cd8] transition-colors"
+        >
+          {tab === 'following' ? 'Explore users' : 'Create post'}
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="divide-y divide-[#2f3336]">
-      {posts.map((post) => {
+      {posts.map((post, index) => {
         const profile = post.profiles;
         const username = profile?.username || 'user';
         const isVerified = profile?.badge_type && profile.badge_type !== 'none';
         const content = post.caption || post.content || '';
+        const isAnimating = animatingPost === post.id;
 
         return (
-          <article key={post.id} className="p-4 hover:bg-[#181836]/50 transition-colors">
+          <article 
+            key={post.id} 
+            className="p-4 hover:bg-[#181836]/50 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
             <div className="flex gap-3">
               {/* Avatar */}
               <Link href={`/profile/${username}`} className="shrink-0">
@@ -341,10 +393,16 @@ export default function Feed() {
                       post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
                     }`}
                   >
-                    <div className={`p-2 rounded-full transition-colors ${post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'}`}>
-                      <Heart className={`w-4 h-4 ${post.is_liked ? 'fill-pink-500' : ''}`} />
+                    <div className={`p-2 rounded-full transition-all duration-200 ${
+                      post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
+                    } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
+                      <Heart className={`w-4 h-4 transition-transform duration-200 ${
+                        post.is_liked ? 'fill-pink-500' : ''
+                      } ${isAnimating ? 'scale-110' : ''}`} />
                     </div>
-                    <span className="text-sm">{post.likes_count || 0}</span>
+                    <span className={`text-sm transition-all duration-200 ${isAnimating ? 'scale-110' : ''}`}>
+                      {post.likes_count || 0}
+                    </span>
                   </button>
 
                   {/* Bookmark */}

@@ -230,4 +230,73 @@ export class ChatService {
     if (error) throw new Error('Failed to delete message');
     return { message: 'Message deleted' };
   }
+
+  async canSendMessage(senderId: string, receiverId: string): Promise<{ allowed: boolean; reason?: string; requiresPayment?: boolean; price?: number }> {
+    // Check if blocked
+    const { data: blocked } = await this.supabaseService
+      .from('blocked_users')
+      .select('id')
+      .or(`and(user_id.eq.${senderId},blocked_user_id.eq.${receiverId}),and(user_id.eq.${receiverId},blocked_user_id.eq.${senderId})`)
+      .single();
+
+    if (blocked) {
+      return { allowed: false, reason: 'User is blocked' };
+    }
+
+    // Check paid chat settings
+    const { data: paidSettings } = await this.supabaseService
+      .from('paid_chat_settings')
+      .select('is_enabled, price_per_message')
+      .eq('user_id', receiverId)
+      .single();
+
+    if (paidSettings?.is_enabled) {
+      // Check if sender has unlocked
+      const { data: unlock } = await this.supabaseService
+        .from('chat_unlocks')
+        .select('id')
+        .eq('user_id', senderId)
+        .eq('creator_id', receiverId)
+        .single();
+      
+      if (!unlock) {
+        return { 
+          allowed: false, 
+          reason: 'Payment required', 
+          requiresPayment: true, 
+          price: paidSettings.price_per_message 
+        };
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  async saveMessage(data: { senderId: string; receiverId: string; content?: string; mediaUrl?: string; encryptedMessage?: string; messageType?: string }) {
+    return this.sendMessage(data.senderId, data.receiverId, data.content || data.encryptedMessage || '', data.mediaUrl);
+  }
+
+  async triggerAutoReply(userId: string, senderId: string, messageId: string) {
+    // Check if user has auto-reply enabled
+    const { data: settings } = await this.supabaseService
+      .from('user_settings')
+      .select('auto_reply_enabled, auto_reply_message')
+      .eq('user_id', userId)
+      .single();
+
+    if (settings?.auto_reply_enabled && settings?.auto_reply_message) {
+      await this.sendMessage(userId, senderId, settings.auto_reply_message);
+    }
+  }
+
+  async markMessagesAsRead(userId: string, senderId: string) {
+    await this.supabaseService
+      .from('messages')
+      .update({ read: true })
+      .eq('receiver_id', userId)
+      .eq('sender_id', senderId)
+      .eq('read', false);
+    
+    return { success: true };
+  }
 }

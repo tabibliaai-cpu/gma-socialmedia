@@ -56,7 +56,7 @@ export class UsersService {
     // Get profile by username
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
-      .select('user_id, username, bio, avatar_url, badge_type, followers_count, following_count')
+      .select('user_id, username, name, bio, avatar_url, cover_url, badge_type, followers_count, following_count, website, location, profession')
       .eq('username', username)
       .single();
 
@@ -107,12 +107,32 @@ export class UsersService {
       updateData.username = updateProfileDto.username;
     }
 
+    if (updateProfileDto.name !== undefined) {
+      updateData.name = updateProfileDto.name;
+    }
+
     if (updateProfileDto.bio !== undefined) {
       updateData.bio = updateProfileDto.bio;
     }
 
     if (updateProfileDto.avatar_url !== undefined) {
       updateData.avatar_url = updateProfileDto.avatar_url;
+    }
+
+    if (updateProfileDto.cover_url !== undefined) {
+      updateData.cover_url = updateProfileDto.cover_url;
+    }
+
+    if (updateProfileDto.website !== undefined) {
+      updateData.website = updateProfileDto.website;
+    }
+
+    if (updateProfileDto.location !== undefined) {
+      updateData.location = updateProfileDto.location;
+    }
+
+    if (updateProfileDto.profession !== undefined) {
+      updateData.profession = updateProfileDto.profession;
     }
 
     const { data, error } = await this.supabaseService
