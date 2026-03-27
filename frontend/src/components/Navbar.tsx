@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -10,13 +9,17 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Build the profile URL dynamically using the logged-in user's username
+  const profileUsername = user?.profile?.username || user?.username;
+  const profileHref = profileUsername ? `/profile/${profileUsername}` : '/login';
+
   const navItems = [
     { href: '/feed', label: 'Home', icon: 'home' },
     { href: '/explore', label: 'Explore', icon: 'search' },
     { href: '/chat', label: 'Messages', icon: 'chat' },
     { href: '/notifications', label: 'Notifications', icon: 'bell' },
     { href: '/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
-    { href: '/profile', label: 'Profile', icon: 'user' },
+    { href: profileHref, label: 'Profile', icon: 'user' },
   ];
 
   const isActive = (href: string) => pathname === href;
@@ -86,10 +89,13 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium transition-all ${isActive(item.href)
-                  ? 'text-white bg-dark-100'
-                  : 'text-dark-600 hover:bg-dark-100 hover:text-white'
-                  }`}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium transition-all ${
+                  pathname.startsWith(item.href) && item.href !== '/feed'
+                    ? 'text-white bg-dark-100'
+                    : pathname === item.href
+                    ? 'text-white bg-dark-100'
+                    : 'text-dark-600 hover:bg-dark-100 hover:text-white'
+                }`}
               >
                 {getIcon(item.icon)}
                 <span className="hidden xl:block">{item.label}</span>
@@ -157,10 +163,11 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${isActive(item.href)
-                  ? 'text-white bg-dark-200'
-                  : 'text-dark-600 hover:bg-dark-200 hover:text-white'
-                  }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
+                  pathname === item.href
+                    ? 'text-white bg-dark-200'
+                    : 'text-dark-600 hover:bg-dark-200 hover:text-white'
+                }`}
               >
                 {getIcon(item.icon)}
                 <span>{item.label}</span>
