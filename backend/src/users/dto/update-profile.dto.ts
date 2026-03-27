@@ -19,11 +19,11 @@ export class UpdateProfileDto {
   bio?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   avatar_url?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   cover_url?: string;
 
   @IsOptional()
