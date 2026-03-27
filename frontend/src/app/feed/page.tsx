@@ -79,7 +79,7 @@ export default function FeedPage() {
         </div>
 
         {/* Create Post with animation */}
-        <div className={`p-4 pb-2 transition-all duration-500 relative z-0 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <div className={`transition-all duration-500 relative z-0 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <CreatePost />
         </div>
 
