@@ -244,30 +244,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Premium Card */}
-        <div className="glass-panel rounded-2xl p-5 mb-4 w-full border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent relative overflow-hidden group">
-          <div className="absolute top-[-50%] right-[-10%] w-[100px] h-[100px] bg-primary/20 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/40 transition-all duration-500"></div>
-          <h2 className="text-xl font-bold text-white mb-2 relative z-10">Subscribe to Premium</h2>
-          <p className="text-sm text-dark-400 mb-5 relative z-10">Subscribe to unlock new features and get a verified badge.</p>
-          <button className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white font-bold rounded-full transition-all duration-300 transform hover:-translate-y-0.5 relative z-10">
+        <div className="border border-[#2f3336] rounded-2xl p-4 mb-4 w-full bg-transparent flex flex-col gap-2">
+          <h2 className="text-xl font-extrabold text-[#e7e9ea]">Subscribe to Premium</h2>
+          <p className="text-[15px] font-normal text-[#e7e9ea] leading-tight mb-1">
+            Subscribe to unlock new features and if eligible, receive a share of ads revenue.
+          </p>
+          <button className="self-start mt-2 px-5 py-2 bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold text-[15px] rounded-full transition-colors">
             Subscribe
           </button>
         </div>
 
         {/* Trending */}
-        <div className="bg-[#16181c] rounded-2xl overflow-hidden w-full">
-          <h2 className="text-xl font-bold text-white p-4 pb-2">What's happening</h2>
+        <div className="border border-[#2f3336] rounded-2xl w-full bg-transparent overflow-hidden">
+          <h2 className="text-xl font-extrabold text-[#e7e9ea] px-4 py-3">What's happening</h2>
           {[
             { category: 'Technology', tag: '#AIRevolution', posts: '45.2K' },
             { category: 'Business', tag: '#StartupLife', posts: '32.1K' },
             { category: 'Trending', tag: '#Web3', posts: '28.5K' },
           ].map((item, i) => (
-            <div key={i} className="px-4 py-3 hover:bg-[#1a1a2a] cursor-pointer transition-colors">
-              <p className="text-xs text-[#71767b]">{item.category} · Trending</p>
-              <p className="font-bold text-white">{item.tag}</p>
-              <p className="text-xs text-[#71767b]">{item.posts} posts</p>
+            <div key={i} className="px-4 py-3 hover:bg-white/[0.03] cursor-pointer transition-colors flex flex-col gap-0.5">
+              <span className="text-[13px] text-[#71767b]">{item.category} · Trending</span>
+              <span className="font-bold text-[15px] text-[#e7e9ea]">{item.tag}</span>
+              <span className="text-[13px] text-[#71767b]">{item.posts} posts</span>
             </div>
           ))}
-          <button className="w-full px-4 py-3 text-[#1d9bf0] hover:bg-[#1a1a2a] text-left transition-colors">
+          <button className="w-full px-4 py-4 text-[#1d9bf0] text-[15px] hover:bg-white/[0.03] text-left transition-colors font-normal">
             Show more
           </button>
         </div>

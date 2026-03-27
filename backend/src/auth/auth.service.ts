@@ -19,7 +19,7 @@ export class AuthService {
     const { data: existingUser } = await this.supabaseService
       .from('users')
       .select('id')
-      .eq('email', email)
+      .ilike('email', email)
       .single();
 
     if (existingUser) {
@@ -97,7 +97,7 @@ export class AuthService {
     const { data: user, error } = await this.supabaseService
       .from('users')
       .select('*')
-      .eq('email', email)
+      .ilike('email', email)
       .single();
 
     console.log('User query result:', { userFound: !!user, error: error?.message });
