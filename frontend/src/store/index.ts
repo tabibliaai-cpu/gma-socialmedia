@@ -11,6 +11,11 @@ interface User {
     badge_type: string;
     followers_count: number;
     following_count: number;
+    name?: string;
+    cover_url?: string;
+    location?: string;
+    website?: string;
+    profession?: string;
   };
 }
 

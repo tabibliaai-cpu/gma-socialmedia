@@ -304,7 +304,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
         return (
           <article
             key={post.id}
-            className={`p-4 md:p-5 transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-primary/5 shadow-inner' : 'hover:bg-white/[0.02] bg-transparent group/post'
+            className={`px-4 py-3 md:px-5 md:py-4 transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-primary/5 shadow-inner' : 'hover:bg-white/[0.02] bg-transparent group/post'
               }`}
             style={{ animationDelay: `${index * 50}ms` }}
           >

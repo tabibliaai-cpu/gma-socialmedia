@@ -228,7 +228,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </main>
 
       {/* Right Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-[300px] xl:w-[350px] shrink-0 h-screen sticky top-0 overflow-y-auto py-2 px-4 xl:px-6">
+      <aside className="hidden lg:flex flex-col gap-4 w-[300px] xl:w-[350px] shrink-0 h-screen sticky top-0 overflow-y-auto py-2 px-4 xl:px-6">
         {/* Search */}
         <div className="sticky top-0 bg-black pb-3 w-full">
           <div className="relative">

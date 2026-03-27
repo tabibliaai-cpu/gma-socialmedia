@@ -82,7 +82,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
   const charLimit = 280;
 
   return (
-    <div className="p-4 md:p-5 mb-2 border-b border-[#2f3336] bg-transparent">
+    <div className="px-4 py-3 md:px-5 md:py-4 mb-0 border-b border-[#2f3336] bg-transparent">
       <form onSubmit={handleSubmit}>
         <div className="flex gap-3 md:gap-4">
           {/* Avatar */}
