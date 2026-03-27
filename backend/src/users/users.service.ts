@@ -48,10 +48,13 @@ export class UsersService {
   }
 
   async getPublicProfile(username: string) {
+    // Normalize to lowercase to handle any casing from client URLs
+    const normalizedUsername = username.toLowerCase().trim();
+
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
       .select('*')
-      .eq('username', username)
+      .ilike('username', normalizedUsername)
       .single();
 
     if (error || !profile) throw new NotFoundException('User not found');

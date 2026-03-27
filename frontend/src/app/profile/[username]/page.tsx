@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { usersAPI, postsAPI, articlesAPI } from '@/lib/api';
+import { usersAPI, articlesAPI } from '@/lib/api';
 import Navbar from '@/components/Navbar';
-import { MapPin, Link as LinkIcon, Calendar, MessageCircle, Share2, Verified, QrCode, Settings, Lock, ChevronRight } from 'lucide-react';
+import Feed from '@/components/Feed';
+import {
+  MapPin, Link as LinkIcon, Calendar, MessageCircle,
+  Verified, QrCode, Settings, Lock, ChevronRight, ArrowLeft
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -12,318 +16,304 @@ import { useParams, useRouter } from 'next/navigation';
 export default function ProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const params = useParams(); // Using safe hook for Next.js routing
-  const targetUsername = params?.username as string;
+  const params = useParams();
+  const targetUsername = (params?.username as string || '').toLowerCase();
 
   const [profile, setProfile] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [activeTab, setActiveTab] = useState('posts');
 
   useEffect(() => {
-    if (targetUsername) {
-      loadProfileAndPosts();
-    }
-  }, [targetUsername, user?.id]); // Re-run if user context loads late
+    if (targetUsername) loadProfile();
+  }, [targetUsername, user?.id]);
 
-  const loadProfileAndPosts = async () => {
+  const loadProfile = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      // 1. Load Profile
       const { data: profileData } = await usersAPI.getPublicProfile(targetUsername);
       setProfile(profileData);
 
-      // 2. Check Follow Status
       if (user && user.id !== profileData.user_id) {
         try {
           const { data: followData } = await usersAPI.checkFollow(profileData.user_id);
           setIsFollowing(followData.isFollowing);
-        } catch (e) {
-          console.log("Follow check skipped");
-        }
+        } catch { /* silent */ }
       }
 
-      // 3. Load User's Timeline Posts
       try {
-        const { data: userPosts } = await postsAPI.getUserPosts(profileData.user_id);
-        setPosts(userPosts || []);
-      } catch (postErr) {
-        console.error('Failed to load timeline', postErr);
-      }
+        const { data: arts } = await articlesAPI.getByAuthor(profileData.user_id);
+        setArticles(arts || []);
+      } catch { /* silent */ }
 
-      // 4. Load User's Articles
-      try {
-        const { data: userArticles } = await articlesAPI.getByAuthor(profileData.user_id);
-        setArticles(userArticles || []);
-      } catch (artErr) {
-        console.error('Failed to load articles', artErr);
-      }
-
-    } catch (error: any) {
-      console.error("Profile load error:", error);
-      setError(true);
-      if (error.response?.status === 404) {
-        toast.error('User not found or profile is hidden.');
-      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Profile not found';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleFollowToggle = async () => {
-    if (!user) return toast.error('Please login to follow users');
+    if (!user) return toast.error('Login to follow users');
     try {
       if (isFollowing) {
         await usersAPI.unfollow(profile.user_id);
-        setProfile({ ...profile, followers_count: Math.max(0, profile.followers_count - 1) });
+        setProfile((p: any) => ({ ...p, followers_count: Math.max(0, (p.followers_count || 1) - 1) }));
       } else {
         await usersAPI.follow(profile.user_id);
-        setProfile({ ...profile, followers_count: profile.followers_count + 1 });
+        setProfile((p: any) => ({ ...p, followers_count: (p.followers_count || 0) + 1 }));
       }
-      setIsFollowing(!isFollowing);
-    } catch (error) {
-      toast.error('Failed to update follow status');
-    }
+      setIsFollowing(f => !f);
+    } catch { toast.error('Failed to update follow status'); }
   };
 
-  const handleGenerateShareLink = async () => {
+  const handleShare = async () => {
     setGeneratingLink(true);
     try {
       const { data } = await usersAPI.createShareLink();
       const url = `${window.location.origin}/shared/${data.token}`;
       await navigator.clipboard.writeText(url);
-      toast.success('Temporary link copied! Expires in 5 minutes.', { duration: 5000 });
-    } catch (error) {
-      toast.error('Failed to generate share link');
-    } finally {
-      setGeneratingLink(false);
-    }
+      toast.success('Link copied! Expires in 5 minutes.');
+    } catch { toast.error('Failed to generate share link'); }
+    finally { setGeneratingLink(false); }
   };
 
-  const startChat = () => {
-    if (!user) return toast.error('Please login to chat');
-    router.push(`/chat/new?userId=${profile.user_id}`);
-  };
+  /* ─── Loading ─── */
+  if (loading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="w-10 h-10 border-t-2 border-[#1d9bf0] rounded-full animate-spin" />
+    </div>
+  );
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#1d9bf0]"></div></div>;
-
-  // Safe Fallback if the profile couldn't load
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <Navbar />
-        <h1 className="text-2xl text-white font-bold mb-4">Profile Not Found</h1>
-        <p className="text-[#71767b] mb-6">This account doesn't exist or is currently hidden.</p>
-        <Link href="/feed" className="px-6 py-2 bg-[#1d9bf0] text-white font-bold rounded-full">Go to Feed</Link>
+  /* ─── Error / Not Found ─── */
+  if (error || !profile) return (
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4">
+        <h1 className="text-2xl font-extrabold text-white">This account doesn't exist</h1>
+        <p className="text-[#71767b] text-[15px]">Try searching for another.</p>
+        <button onClick={() => router.back()} className="mt-2 px-5 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors">
+          Go back
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
   const isOwnProfile = user?.id === profile.user_id;
-  const canMessage =
-    profile.dm_permission === 'everyone' ||
-    (profile.dm_permission === 'selected' && isFollowing) ||
-    isOwnProfile;
+  const canMessage = profile.dm_permission === 'everyone' ||
+    (profile.dm_permission === 'selected' && isFollowing) || isOwnProfile;
+
+  const displayName = profile.display_name || profile.name || profile.username || 'User';
+
+  const tabs = [
+    { id: 'posts', label: 'Posts' },
+    { id: 'articles', label: 'Articles' },
+    ...(isOwnProfile && profile.role === 'creator' ? [{ id: 'monetization', label: 'Monetization' }] : []),
+    ...(isOwnProfile && profile.role === 'business' ? [{ id: 'business', label: 'Dashboard' }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
-      <div className="max-w-2xl mx-auto border-x border-white/5 bg-black/40 backdrop-blur-3xl min-h-screen">
-        {/* Cover Photo */}
-        <div className="h-48 bg-gradient-to-r from-primary/20 to-accent/20 w-full relative">
-          {profile.cover_url && <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />}
+
+      {/* Main column */}
+      <div className="max-w-[600px] mx-auto border-x border-[#2f3336] min-h-screen pt-[53px]">
+
+        {/* Back button row */}
+        <div className="sticky top-[53px] z-10 bg-black/80 backdrop-blur-md px-4 py-2 flex items-center gap-6 border-b border-[#2f3336]">
+          <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
+            <h2 className="text-[17px] font-extrabold text-white leading-tight">{displayName}</h2>
+            <p className="text-[13px] text-[#71767b]">{profile.posts_count || 0} posts</p>
+          </div>
         </div>
 
-        {/* Profile Info */}
-        <div className="px-5 pb-5">
-          <div className="flex justify-between items-start relative">
-            {/* Avatar */}
-            <div className="w-32 h-32 rounded-full border-4 border-black bg-gradient-to-br from-primary to-accent flex items-center justify-center text-4xl text-white font-bold -mt-16 relative overflow-hidden shadow-[0_0_20px_rgba(120,86,255,0.4)]">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                profile.username?.charAt(0)?.toUpperCase() || 'U' // Extremely safe fallback
-              )}
-            </div>
+        {/* Cover */}
+        <div className="h-[200px] bg-[#333639] relative overflow-hidden">
+          {profile.cover_url
+            ? <img src={profile.cover_url} alt="cover" className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-gradient-to-br from-[#1e2a3b] to-[#0d1117]" />
+          }
+        </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 mt-4">
-              {isOwnProfile ? (
-                <>
-                  <button
-                    onClick={handleGenerateShareLink}
-                    disabled={generatingLink}
-                    className="p-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105"
-                    title="Generate 5-min Share Link"
-                  >
-                    <QrCode className="w-5 h-5" />
-                  </button>
-                  <Link href="/settings/privacy" className="p-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105" title="Privacy Settings">
-                    <Settings className="w-5 h-5" />
-                  </Link>
-                  <Link href="/settings/profile" className="px-5 py-2 border border-white/10 text-white font-bold rounded-full hover:bg-white/10 transition-all duration-300 hover:scale-105 active:scale-95">
-                    Edit profile
-                  </Link>
-                </>
-              ) : (
-                <>
-                  {canMessage && (
-                    <button
-                      onClick={startChat}
-                      className="px-4 py-2 flex items-center gap-2 border border-white/10 rounded-full hover:bg-white/10 text-white transition-all duration-300 hover:scale-105 font-bold"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      {profile.paid_chat_settings?.is_enabled && (
-                        <span className="text-sm">₹{profile.paid_chat_settings.price_per_message}</span>
-                      )}
-                    </button>
-                  )}
-                  <button
-                    onClick={handleFollowToggle}
-                    className={`px-6 py-2 font-bold rounded-full transition-all duration-300 hover:scale-105 active:scale-95 ${isFollowing
-                      ? 'border border-white/10 text-white hover:border-red-500 hover:text-red-500 hover:bg-red-500/10'
-                      : 'bg-white text-black hover:bg-gray-200'
-                      }`}
-                  >
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Avatar + Actions row */}
+        <div className="px-4 flex justify-between items-end -mt-[52px] mb-3">
+          {/* Avatar */}
+          <div className="w-[104px] h-[104px] rounded-full border-4 border-black bg-[#333639] overflow-hidden flex items-center justify-center text-4xl font-bold text-white flex-shrink-0">
+            {profile.avatar_url
+              ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              : <span>{displayName.charAt(0).toUpperCase()}</span>
+            }
           </div>
 
-          <div className="mt-4">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-1.5">
-              {profile.name || profile.username || 'User'}
-              {profile.badge_type === 'premium' && (
-                <span title="Premium Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(120,86,255,0.5)]">
-                  <Verified className="w-6 h-6 text-primary fill-primary" />
-                </span>
-              )}
-              {profile.badge_type === 'business' && (
-                <span title="Business Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(255,215,0,0.5)]">
-                  <Verified className="w-6 h-6 text-warning fill-warning" />
-                </span>
-              )}
-              {profile.affiliates && profile.affiliates.length > 0 && (
-                <span title="Affiliate" className="inline-flex drop-shadow-[0_0_5px_rgba(255,215,0,0.5)] bg-warning/10 text-warning text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap align-middle ml-2">
-                  🏢 {profile.affiliates[0].label || 'Brand Ambassador'}
-                </span>
-              )}
-            </h1>
-            <p className="text-dark-400">@{profile.username || 'unknown'}</p>
+          {/* Actions */}
+          <div className="flex items-center gap-2 mt-[60px]">
+            {isOwnProfile ? (
+              <>
+                <button onClick={handleShare} disabled={generatingLink}
+                  className="p-2 border border-[#536471] rounded-full hover:bg-white/10 transition-colors text-white" title="Share profile link">
+                  <QrCode className="w-5 h-5" />
+                </button>
+                <Link href="/settings/privacy"
+                  className="p-2 border border-[#536471] rounded-full hover:bg-white/10 transition-colors text-white" title="Privacy Settings">
+                  <Settings className="w-5 h-5" />
+                </Link>
+                <Link href="/settings/profile"
+                  className="px-4 py-[7px] border border-[#536471] text-white text-[15px] font-bold rounded-full hover:bg-white/10 transition-colors">
+                  Edit profile
+                </Link>
+              </>
+            ) : (
+              <>
+                {canMessage && (
+                  <button onClick={() => {
+                    if (!user) return toast.error('Login to chat');
+                    router.push(`/chat/new?userId=${profile.user_id}`);
+                  }}
+                    className="p-2 border border-[#536471] rounded-full hover:bg-white/10 transition-colors text-white">
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
+                )}
+                <button onClick={handleFollowToggle}
+                  className={`px-4 py-[7px] text-[15px] font-bold rounded-full transition-colors ${isFollowing
+                    ? 'border border-[#536471] text-white hover:border-red-500 hover:text-red-400 hover:bg-red-500/10'
+                    : 'bg-white text-black hover:bg-gray-200'
+                    }`}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+              </>
+            )}
           </div>
+        </div>
+
+        {/* Profile info */}
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h1 className="text-[20px] font-extrabold text-white">{displayName}</h1>
+            {profile.badge_type === 'premium' && (
+              <span title="Premium Verified"><Verified className="w-5 h-5 text-[#1d9bf0] fill-[#1d9bf0]" /></span>
+            )}
+            {profile.badge_type === 'business' && (
+              <span title="Business Verified"><Verified className="w-5 h-5 text-yellow-400 fill-yellow-400" /></span>
+            )}
+            {profile.affiliates?.length > 0 && (
+              <span className="text-xs font-bold bg-yellow-400/10 text-yellow-400 px-2 py-0.5 rounded-full">
+                🏢 {profile.affiliates[0].label || 'Brand Ambassador'}
+              </span>
+            )}
+          </div>
+          <p className="text-[#71767b] text-[15px] mt-0.5">@{profile.username}</p>
 
           {profile.bio && (
-            <p className="text-white mt-4 text-base whitespace-pre-wrap">{profile.bio}</p>
+            <p className="text-[#e7e9ea] text-[15px] mt-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
           )}
 
-          <div className="flex flex-wrap gap-x-5 gap-y-3 mt-4 text-dark-400 text-sm font-medium">
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-[#71767b] text-[14px]">
             {profile.location && (
-              <div className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{profile.location}</div>
+              <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{profile.location}</span>
             )}
             {profile.website && (
-              <div className="flex items-center gap-1.5"><LinkIcon className="w-4 h-4" /><a href={profile.website} target="_blank" className="text-primary hover:underline">{profile.website?.replace(/^https?:\/\//, '')}</a></div>
+              <a href={profile.website} target="_blank" rel="noreferrer"
+                className="flex items-center gap-1 text-[#1d9bf0] hover:underline">
+                <LinkIcon className="w-4 h-4" />{profile.website.replace(/^https?:\/\//, '')}
+              </a>
             )}
             {profile.created_at && (
-              <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
             )}
           </div>
 
-          <div className="flex gap-5 mt-5 text-sm">
-            <Link href={`/profile/${profile.username}/following`} className="hover:underline">
-              <span className="text-white font-bold">{profile.following_count || 0}</span> <span className="text-dark-400">Following</span>
+          <div className="flex gap-5 mt-3 text-[14px]">
+            <Link href={`/profile/${profile.username}/following`} className="hover:underline text-white">
+              <span className="font-bold">{profile.following_count || 0}</span>
+              <span className="text-[#71767b] ml-1">Following</span>
             </Link>
-            <Link href={`/profile/${profile.username}/followers`} className="hover:underline">
-              <span className="text-white font-bold">{profile.followers_count || 0}</span> <span className="text-dark-400">Followers</span>
+            <Link href={`/profile/${profile.username}/followers`} className="hover:underline text-white">
+              <span className="font-bold">{profile.followers_count || 0}</span>
+              <span className="text-[#71767b] ml-1">Followers</span>
             </Link>
           </div>
         </div>
 
-        {/* Timeline Tabs */}
-        <div className="flex border-b border-white/5 overflow-x-auto overflow-y-hidden no-scrollbar">
-          <button onClick={() => setActiveTab('posts')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'posts' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
-            Posts
-            {activeTab === 'posts' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
-          </button>
-
-          <button onClick={() => setActiveTab('articles')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'articles' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
-            Articles
-            {activeTab === 'articles' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
-          </button>
-
-          {isOwnProfile && profile.role === 'creator' && (
-            <button onClick={() => setActiveTab('monetization')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'monetization' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
-              Monetization
-              {activeTab === 'monetization' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
+        {/* Tabs */}
+        <div className="flex border-b border-[#2f3336]">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-4 text-[15px] font-bold relative transition-colors hover:bg-white/[0.03] ${activeTab === tab.id ? 'text-white' : 'text-[#71767b]'}`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-16 rounded-full bg-[#1d9bf0]" />
+              )}
             </button>
-          )}
-
-          {isOwnProfile && profile.role === 'business' && (
-            <button onClick={() => setActiveTab('business')} className={`px-6 flex-1 py-4 font-bold relative transition-colors ${activeTab === 'business' ? 'text-white' : 'text-dark-400 hover:bg-white/5'}`}>
-              Dashboard
-              {activeTab === 'business' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>}
-            </button>
-          )}
+          ))}
         </div>
 
-        {/* Timeline Content */}
-        <div className="divide-y divide-white/5 pb-10">
-          {activeTab === 'posts' && (
-            posts.length === 0 ? (
-              <div className="text-center py-16">
-                <h2 className="text-white text-2xl font-bold">No posts yet</h2>
-                <p className="text-dark-400 mt-2 text-lg">When they post, their timeline will show up here.</p>
-              </div>
-            ) : (
-              posts.map(post => (
-                <div key={post.id} className="p-6 text-white hover:bg-white/5 transition-all duration-300">
-                  <p className="whitespace-pre-wrap text-[1.05rem]">{post.caption}</p>
-                  {post.media_url && (
-                    <img src={post.media_url} alt="Post media" className="mt-4 rounded-2xl border border-white/10 max-h-[500px] w-full object-cover shadow-[0_5px_15px_rgba(0,0,0,0.2)]" />
-                  )}
-                </div>
-              ))
-            )
-          )}
+        {/* Tab Content */}
+        <div className="bg-black">
 
+          {/* Posts Tab — uses global Feed engine */}
+          {activeTab === 'posts' && <Feed userId={profile.user_id} />}
+
+          {/* Articles Tab */}
           {activeTab === 'articles' && (
             articles.length === 0 ? (
-              <div className="text-center py-16">
-                <h2 className="text-white text-2xl font-bold">No articles yet</h2>
-                <p className="text-dark-400 mt-2 text-lg">When they publish articles, they'll appear here.</p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <h2 className="text-[24px] font-extrabold text-white mb-2">No articles yet</h2>
+                <p className="text-[#71767b] text-[15px]">Articles will show up here when published.</p>
               </div>
             ) : (
-              articles.map(article => (
-                <div key={article.id} className="p-6 text-white hover:bg-white/5 transition-all duration-300 flex justify-between items-center cursor-pointer" onClick={() => router.push(`/articles/${article.id}`)}>
-                  <div>
-                    <h3 className="text-xl font-bold flex items-center gap-2 mb-1">
-                      {article.title}
-                      {article.price > 0 && <span className="inline-flex items-center gap-1 bg-primary/20 text-primary text-xs px-2.5 py-1 rounded-full shadow-[0_0_10px_rgba(120,86,255,0.3)]"><Lock className="w-3 h-3" /> ₹{article.price}</span>}
-                    </h3>
-                    <p className="text-dark-400 mt-1">{new Date(article.created_at).toLocaleDateString()}</p>
+              <div className="divide-y divide-[#2f3336]">
+                {articles.map(article => (
+                  <div
+                    key={article.id}
+                    className="px-4 py-4 hover:bg-white/[0.03] cursor-pointer transition-colors flex justify-between items-center gap-3"
+                    onClick={() => router.push(`/articles/${article.id}`)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[17px] font-bold text-[#e7e9ea] flex items-center gap-2 truncate">
+                        {article.title}
+                        {article.price > 0 && (
+                          <span className="flex-shrink-0 inline-flex items-center gap-1 bg-[#1d9bf0]/20 text-[#1d9bf0] text-xs px-2 py-0.5 rounded-full">
+                            <Lock className="w-3 h-3" />₹{article.price}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[#71767b] text-[13px] mt-0.5">{new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#71767b] flex-shrink-0" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-dark-400" />
-                </div>
-              ))
+                ))}
+              </div>
             )
           )}
 
+          {/* Monetization Tab (Creator only) */}
           {activeTab === 'monetization' && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Creator Monetization</h2>
-              <div className="glass-panel p-6 rounded-2xl mb-4 border border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/20 transition-all duration-500"></div>
-                <h3 className="font-bold text-white text-lg relative z-10">Paid Chat Settings</h3>
-                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Set your price per message to filter your DMs and earn from interactions.</p>
-                <div className="flex items-center justify-between relative z-10">
-                  <span className="text-white font-medium text-lg bg-black/50 px-4 py-2 rounded-xl border border-white/5">
-                    Price: <span className="text-primary font-bold">₹{profile.paid_chat_settings?.price_per_message || 0}</span>
+            <div className="p-4">
+              <h2 className="text-[20px] font-extrabold text-white mb-4">Creator Monetization</h2>
+              <div className="border border-[#2f3336] rounded-2xl p-5">
+                <h3 className="font-bold text-white text-[17px] mb-1">Paid Chat Settings</h3>
+                <p className="text-[#71767b] text-[14px] mb-4">Set a price per message to filter DMs and earn from interactions.</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-medium">
+                    Price: <span className="text-[#1d9bf0] font-bold">₹{profile.paid_chat_settings?.price_per_message || 0}</span>
                   </span>
-                  <Link href="/settings/monetization" className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white rounded-full font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5">
+                  <Link href="/settings/monetization"
+                    className="px-4 py-2 bg-white text-black font-bold text-[14px] rounded-full hover:bg-gray-200 transition-colors">
                     Edit Settings
                   </Link>
                 </div>
@@ -331,22 +321,23 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Business Dashboard Tab */}
           {activeTab === 'business' && (
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Business Dashboard</h2>
-              <div className="glass-panel p-6 rounded-2xl mb-6 border border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-primary/20 transition-all duration-500"></div>
-                <h3 className="font-bold text-white text-lg relative z-10">Affiliates & Brand Ambassadors</h3>
-                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Manage users who represent your brand and track their performance.</p>
-                <Link href="/settings/affiliates" className="inline-block px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_15px_rgba(120,86,255,0.4)] text-white rounded-full font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 relative z-10">
+            <div className="p-4 flex flex-col gap-4">
+              <h2 className="text-[20px] font-extrabold text-white">Business Dashboard</h2>
+              <div className="border border-[#2f3336] rounded-2xl p-5">
+                <h3 className="font-bold text-white text-[17px] mb-1">Affiliates & Brand Ambassadors</h3>
+                <p className="text-[#71767b] text-[14px] mb-4">Manage users who represent your brand.</p>
+                <Link href="/settings/affiliates"
+                  className="inline-block px-4 py-2 bg-white text-black font-bold text-[14px] rounded-full hover:bg-gray-200 transition-colors">
                   Manage Affiliates
                 </Link>
               </div>
-              <div className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden group hover:border-warning/30 transition-colors">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full mix-blend-screen filter blur-[40px] group-hover:bg-warning/20 transition-all duration-500"></div>
-                <h3 className="font-bold text-white text-lg relative z-10">CRM & Leads</h3>
-                <p className="text-dark-400 text-sm mb-5 relative z-10 w-3/4">Access your leads dashboard and monitor advertising campaigns.</p>
-                <Link href="/crm" className="inline-block px-5 py-2.5 border border-white/20 hover:bg-white/10 text-white rounded-full font-bold text-sm transition-all duration-300 relative z-10">
+              <div className="border border-[#2f3336] rounded-2xl p-5">
+                <h3 className="font-bold text-white text-[17px] mb-1">CRM & Leads</h3>
+                <p className="text-[#71767b] text-[14px] mb-4">Access leads dashboard and advertising campaigns.</p>
+                <Link href="/crm"
+                  className="inline-block px-4 py-2 border border-[#536471] text-white font-bold text-[14px] rounded-full hover:bg-white/10 transition-colors">
                   Open CRM
                 </Link>
               </div>

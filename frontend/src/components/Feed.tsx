@@ -32,9 +32,10 @@ interface Post {
 
 interface FeedProps {
   tab?: string;
+  userId?: string;
 }
 
-export default function Feed({ tab = 'for-you' }: FeedProps) {
+export default function Feed({ tab = 'for-you', userId }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
 
   useEffect(() => {
     loadPosts();
-  }, [tab]);
+  }, [tab, userId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -68,7 +69,15 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
     setLoading(true);
     setPosts([]);
     try {
-      const { data } = await postsAPI.getFeed();
+      let data;
+      if (userId) {
+        const response = await postsAPI.getUserPosts(userId);
+        data = response.data;
+      } else {
+        const response = await postsAPI.getFeed();
+        data = response.data;
+      }
+
       // Animate posts in one by one
       for (let i = 0; i < (data || []).length; i++) {
         setTimeout(() => {
@@ -265,6 +274,14 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   }
 
   if (posts.length === 0) {
+    if (userId) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <h2 className="text-[24px] font-extrabold text-white mb-2">No posts yet</h2>
+          <p className="text-[#71767b] text-[15px]">When they post, it'll show up here.</p>
+        </div>
+      );
+    }
     return (
       <div className="text-center py-20 px-4">
         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#1d9bf0]/20 to-[#7856ff]/20 flex items-center justify-center">
@@ -290,7 +307,8 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
     <div className="space-y-0 px-0 pb-6 pt-0 divide-y divide-[#2f3336]">
       {posts.map((post, index) => {
         const profile = post.profiles;
-        const username = profile?.username || 'user';
+        const username = (profile?.username || 'user').toLowerCase();
+        const displayName = profile?.display_name || profile?.name || profile?.username || 'User';
         const badgeType = profile?.badge_type || 'none';
         const isPremium = badgeType === 'premium';
         const isBusiness = badgeType === 'business';
@@ -586,14 +604,14 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                       <div className="space-y-3">
                         {comments.map((comment) => (
                           <div key={comment.id} className="flex gap-3">
-                            <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="shrink-0">
+                            <Link href={`/profile/${(comment.profiles?.username || 'user').toLowerCase()}`} className="shrink-0">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white text-xs font-bold">
                                 {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
                               </div>
                             </Link>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm">
-                                <Link href={`/profile/${comment.profiles?.username || 'user'}`} className="font-bold text-white hover:underline">
+                                <Link href={`/profile/${(comment.profiles?.username || 'user').toLowerCase()}`} className="font-bold text-white hover:underline">
                                   {comment.profiles?.username || 'user'}
                                 </Link>
                                 <span className="text-white ml-2">{comment.content}</span>
