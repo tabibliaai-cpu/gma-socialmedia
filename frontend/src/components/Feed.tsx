@@ -33,9 +33,11 @@ interface Post {
 interface FeedProps {
   tab?: string;
   userId?: string;
+  /** When true, renders posts in a 3-column photo grid (profile view) */
+  gridView?: boolean;
 }
 
-export default function Feed({ tab = 'for-you', userId }: FeedProps) {
+export default function Feed({ tab = 'for-you', userId, gridView = false }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<string | null>(null);
@@ -69,25 +71,26 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
     setLoading(true);
     setPosts([]);
     try {
-      let data;
+      let data: Post[];
       if (userId) {
         const response = await postsAPI.getUserPosts(userId);
-        data = response.data;
+        data = response.data || [];
       } else {
         const response = await postsAPI.getFeed();
-        data = response.data;
+        data = response.data || [];
       }
 
-      // Animate posts in one by one
-      for (let i = 0; i < (data || []).length; i++) {
-        setTimeout(() => {
-          setPosts(prev => [...prev, data[i]]);
-        }, i * 50);
-      }
+      // Sort by newest first to guarantee correct order before setting state
+      const sorted = [...data].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      // Set all posts at once — staggered CSS animation handles the visual effect
+      setPosts(sorted);
     } catch (error) {
       console.error('Failed to load posts:', error);
     } finally {
-      setTimeout(() => setLoading(false), 300);
+      setLoading(false);
     }
   };
 
@@ -95,7 +98,7 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
     setAnimatingPost(postId);
     setTimeout(() => setAnimatingPost(null), 500);
 
-    setPosts(posts.map(p => {
+    setPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return {
           ...p,
@@ -112,8 +115,8 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
       } else {
         await postsAPI.like(postId);
       }
-    } catch (error) {
-      setPosts(posts.map(p => {
+    } catch {
+      setPosts(prev => prev.map(p => {
         if (p.id === postId) {
           return {
             ...p,
@@ -130,14 +133,11 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
   const handleRetweet = async (postId: string) => {
     try {
       await postsAPI.share(postId);
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, shares_count: (p.shares_count || 0) + 1 };
-        }
-        return p;
-      }));
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, shares_count: (p.shares_count || 0) + 1 } : p
+      ));
       toast.success('Post shared!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to share post');
     }
   };
@@ -151,13 +151,10 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
         await postsAPI.bookmark(postId);
         toast.success('Added to bookmarks');
       }
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, is_bookmarked: !isBookmarked };
-        }
-        return p;
-      }));
-    } catch (error) {
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, is_bookmarked: !isBookmarked } : p
+      ));
+    } catch {
       toast.error('Failed to update bookmark');
     }
   };
@@ -167,7 +164,7 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
       const url = `${window.location.origin}/post/${postId}`;
       await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy link');
     }
   };
@@ -176,9 +173,9 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
     if (!confirm('Are you sure you want to delete this post?')) return;
     try {
       await postsAPI.delete(postId);
-      setPosts(posts.filter(p => p.id !== postId));
+      setPosts(prev => prev.filter(p => p.id !== postId));
       toast.success('Post deleted');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete post');
     }
     setOpenMenuId(null);
@@ -189,10 +186,10 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
     setIsSavingEdit(true);
     try {
       await postsAPI.update(postId, { caption: editCaption.trim() });
-      setPosts(posts.map(p => p.id === postId ? { ...p, caption: editCaption.trim() } : p));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, caption: editCaption.trim() } : p));
       setEditingPostId(null);
       toast.success('Post updated');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update post');
     } finally {
       setIsSavingEdit(false);
@@ -221,33 +218,26 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
       await postsAPI.addComment(postId, newComment);
       setNewComment('');
       loadComments(postId);
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, comments_count: p.comments_count + 1 };
-        }
-        return p;
-      }));
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p
+      ));
       toast.success('Comment added');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add comment');
     }
   };
 
   const formatTime = (dateString: string) => {
     if (!dateString) return 'just now';
-
     try {
-      // Ensure the timestamp is treated as UTC if it lacks timezone indicators
       const isUTC = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('GMT');
       const safeDateString = isUTC ? dateString : `${dateString}Z`;
-
       const date = new Date(safeDateString);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMins / 60);
       const diffDays = Math.floor(diffHours / 24);
-
       if (diffMs < 0 || isNaN(diffMs)) return 'just now';
       if (diffMins < 1) return 'just now';
       if (diffMins < 60) return `${diffMins}m`;
@@ -303,12 +293,63 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
     );
   }
 
+  /* ─── Grid View (Profile Posts Tab) ─── */
+  if (gridView) {
+    return (
+      <div className="grid grid-cols-3 gap-0.5 bg-[#2f3336]">
+        {posts.map((post, index) => (
+          <Link
+            key={post.id}
+            href={`/post/${post.id}`}
+            className="relative aspect-square bg-black overflow-hidden group"
+            style={{ animationDelay: `${index * 30}ms` }}
+          >
+            {post.media_url ? (
+              post.media_type === 'video' ? (
+                <video
+                  src={post.media_url}
+                  className="w-full h-full object-cover"
+                  muted
+                />
+              ) : (
+                <img
+                  src={post.media_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              )
+            ) : (
+              /* Text-only post tile */
+              <div className="w-full h-full flex items-center justify-center bg-[#16181c] p-2">
+                <p className="text-white text-xs text-center line-clamp-4 leading-relaxed">
+                  {post.caption || post.content || ''}
+                </p>
+              </div>
+            )}
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+              <span className="flex items-center gap-1 text-white text-sm font-bold">
+                <Heart className="w-4 h-4 fill-white" />
+                {post.likes_count || 0}
+              </span>
+              <span className="flex items-center gap-1 text-white text-sm font-bold">
+                <MessageCircle className="w-4 h-4 fill-white" />
+                {post.comments_count || 0}
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
+  /* ─── List View (Feed / Home) ─── */
   return (
     <div className="space-y-0 px-0 pb-6 pt-0 divide-y divide-[#2f3336]">
       {posts.map((post, index) => {
         const profile = post.profiles;
         const username = (profile?.username || 'user').toLowerCase();
-        const displayName = profile?.display_name || profile?.name || profile?.username || 'User';
+        const displayName = (profile as any)?.display_name || (profile as any)?.name || profile?.username || 'User';
         const badgeType = profile?.badge_type || 'none';
         const isPremium = badgeType === 'premium';
         const isBusiness = badgeType === 'business';
@@ -322,9 +363,10 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
         return (
           <article
             key={post.id}
-            className={`px-4 pt-3 pb-2 md:px-5 md:pt-3 md:pb-2 transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-primary/5 shadow-inner' : 'hover:bg-white/[0.02] bg-transparent group/post'
-              }`}
-            style={{ animationDelay: `${index * 50}ms` }}
+            className={`px-4 pt-3 pb-2 md:px-5 md:pt-3 md:pb-2 transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 ${
+              isAd ? 'bg-primary/5 shadow-inner' : 'hover:bg-white/[0.02] bg-transparent group/post'
+            }`}
+            style={{ animationDelay: `${index * 30}ms` }}
           >
             <div className="flex gap-3 md:gap-4">
               {/* Avatar */}
@@ -346,7 +388,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                     {username}
                   </Link>
 
-                  {/* Master Plan: Subscription Badges (Wrapped in Span to fix TypeScript) */}
                   {isPremium && (
                     <span title="Premium Verified" className="inline-flex drop-shadow-[0_0_5px_rgba(120,86,255,0.5)]">
                       <Verified className="w-4 h-4 text-primary fill-primary" />
@@ -365,7 +406,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                   <span className="text-dark-500">·</span>
                   <span className="text-dark-400">{formatTime(post.created_at)}</span>
 
-                  {/* Master Plan: Ad & Article Labels */}
                   {isAd && (
                     <span className="ml-2 text-xs border border-[#71767b] text-[#71767b] px-1.5 py-0.5 rounded">
                       Sponsored
@@ -501,7 +541,7 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                   </div>
                 )}
 
-                {/* Master Plan: Ad Link Button */}
+                {/* Ad Link Button */}
                 {isAd && post.ad_link && (
                   <a href={post.ad_link} target="_blank" rel="noopener noreferrer" className="mt-3 w-full block text-center bg-[#1d9bf0]/10 text-[#1d9bf0] hover:bg-[#1d9bf0]/20 py-2 rounded-full font-bold transition-colors flex items-center justify-center gap-2">
                     Learn More <ExternalLink className="w-4 h-4" />
@@ -510,7 +550,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
 
                 {/* Actions */}
                 <div className="flex items-center justify-between mt-3 max-w-md">
-                  {/* Comment */}
                   <button
                     onClick={() => {
                       setOpenComments(openComments === post.id ? null : post.id);
@@ -524,7 +563,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                     <span className="text-sm">{post.comments_count || 0}</span>
                   </button>
 
-                  {/* Retweet */}
                   <button
                     onClick={() => handleRetweet(post.id)}
                     className="flex items-center gap-1 text-[#71767b] hover:text-green-500 group"
@@ -535,34 +573,37 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                     <span className="text-sm">{post.shares_count || 0}</span>
                   </button>
 
-                  {/* Like */}
                   <button
                     onClick={() => handleLike(post.id, post.is_liked || false)}
-                    className={`flex items-center gap-1 group ${post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
-                      }`}
+                    className={`flex items-center gap-1 group ${
+                      post.is_liked ? 'text-pink-500' : 'text-[#71767b] hover:text-pink-500'
+                    }`}
                   >
-                    <div className={`p-2 rounded-full transition-all duration-200 ${post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
-                      } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
-                      <Heart className={`w-4 h-4 transition-transform duration-200 ${post.is_liked ? 'fill-pink-500' : ''
-                        } ${isAnimating ? 'scale-110' : ''}`} />
+                    <div className={`p-2 rounded-full transition-all duration-200 ${
+                      post.is_liked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'
+                    } ${isAnimating && !post.is_liked ? 'scale-125' : ''}`}>
+                      <Heart className={`w-4 h-4 transition-transform duration-200 ${
+                        post.is_liked ? 'fill-pink-500' : ''
+                      } ${isAnimating ? 'scale-110' : ''}`} />
                     </div>
                     <span className={`text-sm transition-all duration-200 ${isAnimating ? 'scale-110' : ''}`}>
                       {post.likes_count || 0}
                     </span>
                   </button>
 
-                  {/* Bookmark */}
                   <button
                     onClick={() => handleBookmark(post.id, post.is_bookmarked || false)}
-                    className={`flex items-center gap-1 group ${post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
-                      }`}
+                    className={`flex items-center gap-1 group ${
+                      post.is_bookmarked ? 'text-[#1d9bf0]' : 'text-[#71767b] hover:text-[#1d9bf0]'
+                    }`}
                   >
-                    <div className={`p-2 rounded-full transition-colors ${post.is_bookmarked ? 'bg-[#1d9bf0]/10' : 'group-hover:bg-[#1d9bf0]/10'}`}>
+                    <div className={`p-2 rounded-full transition-colors ${
+                      post.is_bookmarked ? 'bg-[#1d9bf0]/10' : 'group-hover:bg-[#1d9bf0]/10'
+                    }`}>
                       <Bookmark className={`w-4 h-4 ${post.is_bookmarked ? 'fill-[#1d9bf0]' : ''}`} />
                     </div>
                   </button>
 
-                  {/* Share */}
                   <button
                     onClick={() => handleShare(post.id)}
                     className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group"
@@ -576,7 +617,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                 {/* Comments Section */}
                 {openComments === post.id && (
                   <div className="mt-4 pt-4 border-t border-white/10">
-                    {/* Add Comment */}
                     <div className="flex gap-3 mb-5">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_10px_rgba(120,86,255,0.3)]">
                         U
@@ -599,7 +639,6 @@ export default function Feed({ tab = 'for-you', userId }: FeedProps) {
                       </div>
                     </div>
 
-                    {/* Comments List */}
                     {comments.length > 0 ? (
                       <div className="space-y-3">
                         {comments.map((comment) => (

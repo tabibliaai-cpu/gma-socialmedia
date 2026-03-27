@@ -7,7 +7,8 @@ import Navbar from '@/components/Navbar';
 import Feed from '@/components/Feed';
 import {
   MapPin, Link as LinkIcon, Calendar, MessageCircle,
-  Verified, QrCode, Settings, Lock, ChevronRight, ArrowLeft
+  Verified, QrCode, Settings, Lock, ChevronRight, ArrowLeft,
+  Grid3X3, List
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -26,6 +27,8 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [activeTab, setActiveTab] = useState('posts');
+  /** Toggle between Instagram-style grid and list view for posts */
+  const [postsGridView, setPostsGridView] = useState(true);
 
   useEffect(() => {
     if (targetUsername) loadProfile();
@@ -146,7 +149,6 @@ export default function ProfilePage() {
 
         {/* Avatar + Actions row */}
         <div className="px-4 flex justify-between items-end -mt-[52px] mb-3">
-          {/* Avatar */}
           <div className="w-[104px] h-[104px] rounded-full border-4 border-black bg-[#333639] overflow-hidden flex items-center justify-center text-4xl font-bold text-white flex-shrink-0">
             {profile.avatar_url
               ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -154,7 +156,6 @@ export default function ProfilePage() {
             }
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2 mt-[60px]">
             {isOwnProfile ? (
               <>
@@ -183,10 +184,11 @@ export default function ProfilePage() {
                   </button>
                 )}
                 <button onClick={handleFollowToggle}
-                  className={`px-4 py-[7px] text-[15px] font-bold rounded-full transition-colors ${isFollowing
-                    ? 'border border-[#536471] text-white hover:border-red-500 hover:text-red-400 hover:bg-red-500/10'
-                    : 'bg-white text-black hover:bg-gray-200'
-                    }`}>
+                  className={`px-4 py-[7px] text-[15px] font-bold rounded-full transition-colors ${
+                    isFollowing
+                      ? 'border border-[#536471] text-white hover:border-red-500 hover:text-red-400 hover:bg-red-500/10'
+                      : 'bg-white text-black hover:bg-gray-200'
+                  }`}>
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
               </>
@@ -252,7 +254,9 @@ export default function ProfilePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-4 text-[15px] font-bold relative transition-colors hover:bg-white/[0.03] ${activeTab === tab.id ? 'text-white' : 'text-[#71767b]'}`}
+              className={`flex-1 py-4 text-[15px] font-bold relative transition-colors hover:bg-white/[0.03] ${
+                activeTab === tab.id ? 'text-white' : 'text-[#71767b]'
+              }`}
             >
               {tab.label}
               {activeTab === tab.id && (
@@ -265,8 +269,38 @@ export default function ProfilePage() {
         {/* Tab Content */}
         <div className="bg-black">
 
-          {/* Posts Tab — uses global Feed engine */}
-          {activeTab === 'posts' && <Feed userId={profile.user_id} />}
+          {/* Posts Tab */}
+          {activeTab === 'posts' && (
+            <>
+              {/* Grid / List toggle */}
+              <div className="flex justify-end items-center gap-1 px-4 py-2 border-b border-[#2f3336]">
+                <button
+                  onClick={() => setPostsGridView(true)}
+                  title="Grid view"
+                  className={`p-2 rounded-full transition-colors ${
+                    postsGridView
+                      ? 'text-[#1d9bf0] bg-[#1d9bf0]/10'
+                      : 'text-[#71767b] hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setPostsGridView(false)}
+                  title="List view"
+                  className={`p-2 rounded-full transition-colors ${
+                    !postsGridView
+                      ? 'text-[#1d9bf0] bg-[#1d9bf0]/10'
+                      : 'text-[#71767b] hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+
+              <Feed userId={profile.user_id} gridView={postsGridView} />
+            </>
+          )}
 
           {/* Articles Tab */}
           {activeTab === 'articles' && (
@@ -292,7 +326,9 @@ export default function ProfilePage() {
                           </span>
                         )}
                       </h3>
-                      <p className="text-[#71767b] text-[13px] mt-0.5">{new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="text-[#71767b] text-[13px] mt-0.5">
+                        {new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#71767b] flex-shrink-0" />
                   </div>
