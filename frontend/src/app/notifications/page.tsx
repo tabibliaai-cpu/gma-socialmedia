@@ -31,7 +31,6 @@ export default function NotificationsPage() {
     try {
       const { data } = await notificationsAPI.getAll();
       setNotifications((data || []).map((n: any) => ({ ...n, read: n.read ?? n.is_read ?? false })));
-      setNotifications(data || []);
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
@@ -69,7 +68,11 @@ export default function NotificationsPage() {
   };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+    // Ensure the timestamp is treated as UTC if it lacks timezone indicators
+    const isUTC = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('GMT');
+    const safeDateString = isUTC ? dateString : `${dateString}Z`;
+
+    const date = new Date(safeDateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -95,8 +98,8 @@ export default function NotificationsPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab.toLowerCase())}
                 className={`flex-1 py-4 text-center font-medium transition-all duration-300 relative ${activeTab === tab.toLowerCase()
-                    ? 'text-white'
-                    : 'text-dark-400 hover:bg-white/5'
+                  ? 'text-white'
+                  : 'text-dark-400 hover:bg-white/5'
                   }`}
               >
                 {tab}

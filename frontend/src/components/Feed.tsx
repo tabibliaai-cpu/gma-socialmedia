@@ -228,7 +228,11 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
     if (!dateString) return 'just now';
 
     try {
-      const date = new Date(dateString);
+      // Ensure the timestamp is treated as UTC if it lacks timezone indicators
+      const isUTC = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('GMT');
+      const safeDateString = isUTC ? dateString : `${dateString}Z`;
+
+      const date = new Date(safeDateString);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);

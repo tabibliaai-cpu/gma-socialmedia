@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import Navbar from '@/components/Navbar';
 import { Send, Phone, Video, MoreVertical, Image, Smile, Paperclip, Mic } from 'lucide-react';
-import { useEffect, useRef, useState as useReactState } from 'react';
+import { useEffect, useRef } from 'react';
+import { useChatStore } from '@/store';
 
 interface Message {
   id: string;
@@ -20,10 +21,17 @@ interface Message {
 export default function NewChatPage() {
   const { user } = useAuth();
   const { sendMessage, isConnected } = useSocket();
+  const { messages, setMessages } = useChatStore();
   const [receiverId, setReceiverId] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const preFilledUserId = params.get('userId');
+    if (preFilledUserId) setReceiverId(preFilledUserId);
+    setMessages([]);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -35,19 +43,8 @@ export default function NewChatPage() {
 
   const handleSend = () => {
     if (!newMessage.trim() || !receiverId.trim()) return;
-    
+
     sendMessage(receiverId, newMessage);
-    setMessages([
-      ...messages,
-      {
-        id: Date.now().toString(),
-        sender_id: user?.id || '',
-        receiver_id: receiverId,
-        encrypted_message: newMessage,
-        message_type: 'text',
-        created_at: new Date().toISOString(),
-      },
-    ]);
     setNewMessage('');
   };
 
@@ -102,9 +99,8 @@ export default function NewChatPage() {
                 const isMine = msg.sender_id === user?.id;
                 return (
                   <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isMine ? 'bg-primary-600 text-white' : 'bg-dark-300 text-white'
-                    }`}>
+                    <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${isMine ? 'bg-primary-600 text-white' : 'bg-dark-300 text-white'
+                      }`}>
                       <p>{msg.encrypted_message}</p>
                       <p className={`text-xs mt-1 ${isMine ? 'text-primary-200' : 'text-gray-500'}`}>
                         {new Date(msg.created_at).toLocaleTimeString()}

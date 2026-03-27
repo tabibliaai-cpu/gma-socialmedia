@@ -3,7 +3,7 @@ import { SupabaseService } from '../common/supabase/supabase.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(private supabaseService: SupabaseService) { }
 
   async create(userId: string, data: {
     type: string;
@@ -17,7 +17,7 @@ export class NotificationsService {
         user_id: userId,
         type: data.type,
         title: data.title,
-        content: data.content,
+        content: data.content || '',
         data: data.data || {},
       })
       .select()

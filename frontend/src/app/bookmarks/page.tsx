@@ -40,7 +40,10 @@ export default function BookmarksPage() {
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
+      const isUTC = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('GMT');
+      const safeDateString = isUTC ? dateString : `${dateString}Z`;
+
+      const date = new Date(safeDateString);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
@@ -66,7 +69,7 @@ export default function BookmarksPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-white">Bookmarks</h1>
             {bookmarks.length > 0 && (
-              <button 
+              <button
                 onClick={() => {
                   if (confirm('Remove all bookmarks?')) {
                     setBookmarks([]);
@@ -117,7 +120,7 @@ export default function BookmarksPage() {
                     {(post.caption || post.content) && (
                       <p className="text-white mt-1 whitespace-pre-wrap">{post.caption || post.content}</p>
                     )}
-                    
+
                     <div className="flex items-center justify-between mt-3 max-w-md">
                       <button className="flex items-center gap-1 text-[#71767b] hover:text-[#1d9bf0] group">
                         <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors">
@@ -141,7 +144,7 @@ export default function BookmarksPage() {
                           <Share className="w-4 h-4" />
                         </div>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleRemoveBookmark(post.id)}
                         className="flex items-center gap-1 text-[#1d9bf0] hover:text-red-400 group"
                         title="Remove from bookmarks"
