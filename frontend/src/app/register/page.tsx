@@ -76,7 +76,7 @@ export default function RegisterPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
                 className="w-full px-5 py-4 glass-input rounded-xl text-white placeholder-dark-500 focus:outline-none"
                 placeholder="you@example.com"
                 required

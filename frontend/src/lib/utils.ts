@@ -16,7 +16,9 @@ export function formatNumber(num: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  const d = new Date(date);
+  // If the date string from Supabase lacks timezone info, append 'Z' to force UTC evaluation
+  const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? date + 'Z' : date;
+  const d = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - d.getTime();
 
@@ -63,7 +65,7 @@ export async function encryptMessage(message: string, key: string): Promise<stri
   const encoder = new TextEncoder();
   const data = encoder.encode(message);
   const keyBytes = encoder.encode(key);
-  
+
   const encrypted = Array.from(data).map((byte, i) => byte ^ keyBytes[i % keyBytes.length]);
   return btoa(String.fromCharCode(...encrypted));
 }
@@ -72,11 +74,11 @@ export async function decryptMessage(encrypted: string, key: string): Promise<st
   // Simple XOR decryption for demo - use proper encryption in production
   const encoder = new TextEncoder();
   const keyBytes = encoder.encode(key);
-  
+
   const data = atob(encrypted);
-  const decrypted = data.split('').map((char, i) => 
+  const decrypted = data.split('').map((char, i) =>
     char.charCodeAt(0) ^ keyBytes[i % keyBytes.length]
   );
-  
+
   return new TextDecoder().decode(new Uint8Array(decrypted));
 }

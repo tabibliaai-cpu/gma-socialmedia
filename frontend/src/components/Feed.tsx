@@ -447,17 +447,29 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
                     </div>
                   </div>
                 ) : isArticle ? (
-                  <div className="mt-2 p-4 border border-[#2f3336] rounded-xl bg-[#151515]">
-                    <h3 className="text-xl font-bold text-white mb-2">{post.caption}</h3>
-                    <p className="text-[#71767b] line-clamp-3">{post.content}</p>
-                    <Link href={`/article/${post.id}`} className="text-[#1d9bf0] text-sm mt-2 inline-block hover:underline">
-                      Read full article
-                    </Link>
-                  </div>
+                  <Link href={`/article/${post.id}`} className="block mt-3 p-4 border border-dark-200 rounded-2xl bg-dark-100 hover:bg-dark-200 transition-all duration-300 group/article cursor-pointer overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/article:opacity-100 transition-opacity"></div>
+                    <h3 className="text-xl font-bold text-white mb-2 group-hover/article:text-primary transition-colors relative z-10">{post.caption}</h3>
+                    <p className="text-dark-400 line-clamp-3 relative z-10">{post.content}</p>
+                    <span className="text-primary text-sm font-bold mt-3 inline-flex items-center gap-1 relative z-10">
+                      Read full article <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </Link>
                 ) : (
-                  <p className="text-white text-base mt-1 whitespace-pre-wrap break-words">
-                    {content}
-                  </p>
+                  <div className="text-white text-base mt-2 whitespace-pre-wrap break-words">
+                    {content.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
+                      if (part.match(/(https?:\/\/[^\s]+)/g)) {
+                        if (part.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                          return <img key={i} src={part} alt="" className="mt-3 rounded-2xl w-full max-h-[500px] object-cover border border-[#2f3336] bg-black" />;
+                        }
+                        if (part.match(/\.(mp4|webm|ogg)$/i)) {
+                          return <video key={i} src={part} controls className="mt-3 rounded-2xl w-full max-h-[500px] object-cover border border-[#2f3336] bg-black" />;
+                        }
+                        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-[#1d9bf0] hover:underline">{part}</a>;
+                      }
+                      return <span key={i}>{part}</span>;
+                    })}
+                  </div>
                 )}
 
                 {/* Media */}
