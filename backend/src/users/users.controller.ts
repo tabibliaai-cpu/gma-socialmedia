@@ -14,11 +14,6 @@ export class UsersController {
     return this.usersService.getProfile(req.user.id);
   }
 
-  @Get(':username')
-  async getUserProfile(@Param('username') username: string) {
-    return this.usersService.getPublicProfile(username);
-  }
-
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
@@ -52,16 +47,6 @@ export class UsersController {
     return this.usersService.unfollowUser(req.user.id, userId);
   }
 
-  @Get(':username/followers')
-  async getFollowers(@Param('username') username: string) {
-    return this.usersService.getFollowers(username);
-  }
-
-  @Get(':username/following')
-  async getFollowing(@Param('username') username: string) {
-    return this.usersService.getFollowing(username);
-  }
-
   @UseGuards(JwtAuthGuard)
   @Get('check-follow/:userId')
   async checkFollowStatus(@Request() req, @Param('userId') userId: string) {
@@ -77,5 +62,21 @@ export class UsersController {
   @Get('shared/:token')
   async getSharedProfile(@Param('token') token: string) {
     return this.usersService.getSharedProfile(token);
+  }
+
+  // NOTE: Wildcard routes must come LAST to avoid swallowing specific routes above
+  @Get(':username')
+  async getUserProfile(@Param('username') username: string) {
+    return this.usersService.getPublicProfile(username);
+  }
+
+  @Get(':username/followers')
+  async getFollowers(@Param('username') username: string) {
+    return this.usersService.getFollowers(username);
+  }
+
+  @Get(':username/following')
+  async getFollowing(@Param('username') username: string) {
+    return this.usersService.getFollowing(username);
   }
 }
