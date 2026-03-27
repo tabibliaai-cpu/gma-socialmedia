@@ -7,7 +7,7 @@ export class CreatePostDto {
   caption?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   media_url?: string;
 
   @IsOptional()

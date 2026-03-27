@@ -23,7 +23,7 @@ export class UsersService {
 
     const { data: profile } = await this.supabaseService
       .from('profiles')
-      .select('username, bio, avatar_url, badge_type, followers_count, following_count')
+      .select('*')
       .eq('user_id', userId)
       .single();
 
@@ -50,7 +50,7 @@ export class UsersService {
   async getPublicProfile(username: string) {
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
-      .select('user_id, username, bio, avatar_url, badge_type, followers_count, following_count')
+      .select('*')
       .eq('username', username)
       .single();
 
@@ -115,12 +115,13 @@ export class UsersService {
       updateData.username = updateProfileDto.username;
     }
 
-    if (updateProfileDto.name !== undefined) {
-      // updateData.name = updateProfileDto.name; // column missing
-    }
+    if (updateProfileDto.name !== undefined) updateData.name = updateProfileDto.name;
     if (updateProfileDto.bio !== undefined) updateData.bio = updateProfileDto.bio;
     if (updateProfileDto.avatar_url !== undefined) updateData.avatar_url = updateProfileDto.avatar_url;
-    // Cover, website, location, profession removed because columns missing in DB
+    if (updateProfileDto.cover_url !== undefined) updateData.cover_url = updateProfileDto.cover_url;
+    if (updateProfileDto.website !== undefined) updateData.website = updateProfileDto.website;
+    if (updateProfileDto.location !== undefined) updateData.location = updateProfileDto.location;
+    if (updateProfileDto.profession !== undefined) updateData.profession = updateProfileDto.profession;
 
     const { data, error } = await this.supabaseService
       .from('profiles')

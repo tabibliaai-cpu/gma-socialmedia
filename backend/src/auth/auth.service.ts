@@ -142,7 +142,7 @@ export class AuthService {
     // Get profile separately
     const { data: profile } = await this.supabaseService
       .from('profiles')
-      .select('username, bio, avatar_url, badge_type, followers_count, following_count')
+      .select('*')
       .eq('user_id', userId)
       .single();
 

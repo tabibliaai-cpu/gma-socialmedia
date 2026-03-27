@@ -95,7 +95,7 @@ export default function CreatePost({ onPostCreated }: CreatePostProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 pt-2">
+          <div className="flex-1 min-w-0">
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
