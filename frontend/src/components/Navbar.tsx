@@ -86,11 +86,10 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium transition-all ${
-                  isActive(item.href)
-                    ? 'text-white bg-dark-100'
-                    : 'text-dark-600 hover:bg-dark-100 hover:text-white'
-                }`}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium transition-all ${isActive(item.href)
+                  ? 'text-white bg-dark-100'
+                  : 'text-dark-600 hover:bg-dark-100 hover:text-white'
+                  }`}
               >
                 {getIcon(item.icon)}
                 <span className="hidden xl:block">{item.label}</span>
@@ -109,14 +108,26 @@ export default function Navbar() {
             </Link>
 
             {/* User Avatar */}
+            {!user && (
+              <Link
+                href="/login"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-bold rounded-full transition-all text-sm"
+              >
+                Log in
+              </Link>
+            )}
             {user && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="w-10 h-10 rounded-full bg-dark-100 border-2 border-dark-300 overflow-hidden"
+                className="w-10 h-10 rounded-full bg-dark-100 ring-2 ring-transparent hover:ring-primary overflow-hidden transition-all duration-300"
               >
-                <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
-                  {user.username?.[0]?.toUpperCase() || 'U'}
-                </div>
+                {user.profile?.avatar_url ? (
+                  <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
+                    {user.username?.[0]?.toUpperCase() || user.profile?.username?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                )}
               </button>
             )}
 
@@ -146,11 +157,10 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
-                  isActive(item.href)
-                    ? 'text-white bg-dark-200'
-                    : 'text-dark-600 hover:bg-dark-200 hover:text-white'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${isActive(item.href)
+                  ? 'text-white bg-dark-200'
+                  : 'text-dark-600 hover:bg-dark-200 hover:text-white'
+                  }`}
               >
                 {getIcon(item.icon)}
                 <span>{item.label}</span>

@@ -61,7 +61,7 @@ export default function RegisterPage() {
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 className="w-full px-5 py-4 glass-input rounded-xl text-white placeholder-dark-500 focus:outline-none"
                 placeholder="johndoe"
                 required

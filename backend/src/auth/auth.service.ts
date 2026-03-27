@@ -58,12 +58,16 @@ export class AuthService {
     }
 
     // Create profile
-    await this.supabaseService.from('profiles').insert({
+    const { error: profileError } = await this.supabaseService.from('profiles').insert({
       user_id: user.id,
       username,
       bio: '',
       badge_type: 'none',
+      avatar_url: '',
     });
+    if (profileError) {
+      console.error('Failed to create profile for user:', user.id, profileError);
+    }
 
     // Create privacy settings
     await this.supabaseService.from('privacy_settings').insert({

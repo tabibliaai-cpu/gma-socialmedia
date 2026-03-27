@@ -62,7 +62,7 @@ export default function ArticlePage() {
   return (
     <div className="min-h-screen bg-dark-300">
       <Navbar />
-      <article className="max-w-3xl mx-auto px-4 py-8">
+      <article className="max-w-3xl mx-auto px-4 py-8 pt-24">
         {/* Back */}
         <Link
           href="/feed"
@@ -133,7 +133,7 @@ export default function ArticlePage() {
               <div className="blur-sm select-none">
                 <p className="text-gray-300 whitespace-pre-wrap">{article.content}</p>
               </div>
-              
+
               {/* Lock Overlay */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="bg-dark-200 rounded-2xl p-8 text-center max-w-md border border-gray-700">
