@@ -283,7 +283,7 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
   }
 
   return (
-    <div className="space-y-4 px-2 pb-6 pt-2">
+    <div className="space-y-0 px-0 pb-6 pt-0 divide-y divide-[#2f3336]">
       {posts.map((post, index) => {
         const profile = post.profiles;
         const username = profile?.username || 'user';
@@ -300,14 +300,19 @@ export default function Feed({ tab = 'for-you' }: FeedProps) {
         return (
           <article
             key={post.id}
-            className={`glass-panel rounded-2xl p-5 md:p-6 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 border ${isAd ? 'border-primary/30 bg-primary/5 shadow-[0_0_20px_rgba(120,86,255,0.1)]' : 'border-white/5 hover:border-primary/20 hover:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group/post'}`}
+            className={`p-4 md:p-5 transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 ${isAd ? 'bg-primary/5 shadow-inner' : 'hover:bg-white/[0.02] bg-transparent group/post'
+              }`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <div className="flex gap-3 md:gap-4">
               {/* Avatar */}
               <Link href={`/profile/${username}`} className="shrink-0 relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(120,86,255,0.3)] transform transition-transform duration-300 hover:scale-105">
-                  {username[0].toUpperCase()}
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold transition-transform duration-300 hover:scale-105">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={username} className="w-full h-full object-cover" />
+                  ) : (
+                    username[0].toUpperCase()
+                  )}
                 </div>
               </Link>
 

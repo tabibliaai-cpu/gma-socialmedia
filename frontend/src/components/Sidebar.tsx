@@ -31,11 +31,10 @@ export default function Sidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-4 px-3 py-3 rounded-full text-xl font-bold transition-all ${
-              isActive(item.href)
+            className={`flex items-center gap-4 px-3 py-3 rounded-full text-xl font-bold transition-all ${isActive(item.href)
                 ? 'text-white'
                 : 'text-dark-600 hover:bg-dark-100 hover:text-white'
-            }`}
+              }`}
           >
             <item.icon className={`w-6 h-6 ${isActive(item.href) ? 'stroke-[2.5]' : ''}`} />
             <span className="hidden xl:block">{item.label}</span>
@@ -67,8 +66,12 @@ export default function Sidebar() {
       {/* User Card */}
       {user && (
         <div className="flex items-center gap-3 p-3 rounded-full hover:bg-dark-100 cursor-pointer transition-colors mt-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0">
-            {user.username?.[0]?.toUpperCase() || 'U'}
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0">
+            {user?.profile?.avatar_url ? (
+              <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              user.username?.[0]?.toUpperCase() || 'U'
+            )}
           </div>
           <div className="hidden xl:block flex-1 min-w-0">
             <p className="font-bold text-white text-sm truncate">{user.username}</p>

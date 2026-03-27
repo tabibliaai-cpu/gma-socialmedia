@@ -70,10 +70,8 @@ export default function EditProfilePage() {
       await refreshProfile();
       toast.success('Profile updated!');
 
-      // Redirect if username changed
-      if (username !== user?.profile?.username) {
-        router.push(`/profile/${username}`);
-      }
+      // Redirect back to profile page to show changes
+      router.push(`/profile/${username}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update profile');
     } finally {

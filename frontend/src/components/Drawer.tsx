@@ -164,8 +164,12 @@ export default function Drawer({ isOpen, onClose, children }: DrawerProps) {
                   onClick={() => handleNavClick(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
                   className="w-full flex items-center gap-4 p-5 hover:bg-white/5 transition-colors group"
                 >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0 shadow-[0_0_10px_rgba(120,86,255,0.3)] group-hover:scale-105 transition-transform">
-                    {user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#1d9bf0] to-[#7856ff] flex items-center justify-center text-white font-bold shrink-0 shadow-[0_0_10px_rgba(120,86,255,0.3)] group-hover:scale-105 transition-transform">
+                    {user?.profile?.avatar_url ? (
+                      <img src={user.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.profile?.username?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
+                    )}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-white font-bold truncate text-lg group-hover:text-primary transition-colors">
