@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SupabaseService } from '../common/supabase/supabase.service';
@@ -10,17 +10,17 @@ export class AuthService {
   constructor(
     private supabaseService: SupabaseService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async register(registerDto: RegisterDto) {
     const { email, password, role = 'user', username } = registerDto;
 
-    // Check if user exists
+    // Check if email exists
     const { data: existingUser } = await this.supabaseService
       .from('users')
       .select('id')
       .ilike('email', email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       throw new ConflictException('Email already registered');
@@ -31,14 +31,14 @@ export class AuthService {
       .from('profiles')
       .select('user_id')
       .eq('username', username)
-      .single();
+      .maybeSingle();
 
     if (existingProfile) {
       throw new ConflictException('Username already taken');
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Create user
     const { data: user, error: userError } = await this.supabaseService
@@ -54,7 +54,7 @@ export class AuthService {
 
     if (userError || !user) {
       console.error('Supabase user insert error:', JSON.stringify(userError, null, 2));
-      throw new Error(`Failed to create user: ${userError?.message || 'Unknown error'}`);
+      throw new InternalServerErrorException(`Failed to create user: ${userError?.message || 'Unknown error'}`);
     }
 
     // Create profile
@@ -70,12 +70,15 @@ export class AuthService {
     }
 
     // Create privacy settings
-    await this.supabaseService.from('privacy_settings').insert({
+    const { error: privacyError } = await this.supabaseService.from('privacy_settings').insert({
       user_id: user.id,
     });
+    if (privacyError) {
+      console.error('Failed to create privacy settings for user:', user.id, privacyError);
+    }
 
     // Generate tokens
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = this.generateTokens(user.id, user.email, user.role);
 
     return {
       message: 'Registration successful',
@@ -83,6 +86,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        username,
       },
       ...tokens,
     };
@@ -91,35 +95,26 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    console.log('Login attempt for:', email);
-
     // Find user
     const { data: user, error } = await this.supabaseService
       .from('users')
       .select('*')
       .ilike('email', email)
-      .single();
-
-    console.log('User query result:', { userFound: !!user, error: error?.message });
+      .maybeSingle();
 
     if (error || !user) {
-      console.log('User not found');
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    console.log('Stored hash:', user.password_hash?.substring(0, 20) + '...');
-
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    console.log('Password valid:', isValidPassword);
 
     if (!isValidPassword) {
-      console.log('Invalid password');
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Generate tokens
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = this.generateTokens(user.id, user.email, user.role);
 
     return {
       message: 'Login successful',
@@ -143,39 +138,35 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Get profile separately
     const { data: profile } = await this.supabaseService
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    // Get privacy settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
       .select('name_visibility, dm_permission')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    // Get paid chat settings
     let paidChatSettings: any = null;
     if (user.role === 'creator') {
       const { data: pc } = await this.supabaseService
         .from('paid_chat_settings')
         .select('is_enabled, price_per_message')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       paidChatSettings = pc;
     }
 
-    // Get business settings
     let businessSettings: any = null;
     if (user.role === 'business') {
       const { data: bs } = await this.supabaseService
         .from('user_settings')
         .select('auto_reply_enabled, auto_reply_message')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       businessSettings = bs;
     }
 
@@ -188,30 +179,25 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string) {
+  async logout(_userId: string) {
     return { message: 'Logged out successfully' };
   }
 
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      const tokens = await this.generateTokens(payload.sub, payload.email, payload.role);
+      const tokens = this.generateTokens(payload.sub, payload.email, payload.role);
       return tokens;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  private async generateTokens(userId: string, email: string, role: string) {
+  private generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
-
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '30d' });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '60d' });
-
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    };
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+    return { access_token: accessToken, refresh_token: refreshToken };
   }
 
   async validateUser(userId: string) {
@@ -219,7 +205,7 @@ export class AuthService {
       .from('users')
       .select('id, email, role')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     return user;
   }
 }

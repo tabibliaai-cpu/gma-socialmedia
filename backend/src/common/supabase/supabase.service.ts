@@ -1,14 +1,20 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class SupabaseService {
+export class SupabaseService implements OnModuleInit {
   private client: SupabaseClient;
 
-  constructor(private configService: ConfigService) {
-    const supabaseUrl = (this.configService.get('SUPABASE_URL') || 'https://qvgpzjkawocfrwakmfdw.supabase.co').trim();
-    const supabaseKey = (this.configService.get('SUPABASE_SERVICE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2Z3B6amthd29jZnJ3YWttZmR3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzMTM5NCwiZXhwIjoyMDg5NTA3Mzk0fQ.OlcCYBFpf1CKHaWm2KbmkLjegM1keP4eHrTrefr4kJA').trim();
+  constructor(private configService: ConfigService) {}
+
+  onModuleInit() {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL')?.trim();
+    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY')?.trim();
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment variables');
+    }
 
     this.client = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -22,12 +28,10 @@ export class SupabaseService {
     return this.client;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   auth(): any {
     return this.client.auth;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   storage(): any {
     return this.client.storage;
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -18,15 +18,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    console.log('JWT Strategy validate() called with payload:', JSON.stringify(payload));
     const user = await this.authService.validateUser(payload.sub);
-    console.log('validateUser result:', JSON.stringify(user));
     if (!user) {
-      console.log('User not found in database');
-      return null;
+      throw new UnauthorizedException('User not found or session expired');
     }
-    const result = { id: payload.sub, email: payload.email, role: payload.role };
-    console.log('Returning user:', JSON.stringify(result));
-    return result;
+    return { id: payload.sub, email: payload.email, role: payload.role };
   }
 }
