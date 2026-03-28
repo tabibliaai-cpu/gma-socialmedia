@@ -6,6 +6,7 @@ import MainLayout from '@/components/MainLayout';
 import { searchAPI, usersAPI } from '@/lib/api';
 import Link from 'next/link';
 import { Search, TrendingUp, User, Hash, ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 function ExplorePageContent() {
   const router = useRouter();
@@ -62,11 +63,12 @@ function ExplorePageContent() {
     ],
   };
 
+  // NOTE: These are placeholder users - in production these should come from the API
   const suggestedUsers = [
     { username: 'techfounder', name: 'Tech Founder', badge: true, followers: '125K' },
     { username: 'aibuilder', name: 'AI Builder', badge: true, followers: '89K' },
     { username: 'startupguru', name: 'Startup Guru', badge: false, followers: '67K' },
-    { username: 'code master', name: 'Code Master', badge: false, followers: '45K' },
+    { username: 'codemaster', name: 'Code Master', badge: false, followers: '45K' },
   ];
 
   useEffect(() => {
@@ -84,7 +86,6 @@ function ExplorePageContent() {
       setShowSearch(false);
       return;
     }
-
     setIsSearching(true);
     setShowSearch(true);
     try {
@@ -108,198 +109,158 @@ function ExplorePageContent() {
     router.push(`/search?tag=${encodeURIComponent(tag)}`);
   };
 
-  const handleFollow = (username: string) => {
-    // Toggle follow state - TODO: API integration
-    toast.success(`Followed @${username}`);
-  };
-
   return (
-    <MainLayout>
-      <div className="min-h-screen">
-        {/* Header with Search */}
-        <div className="sticky top-0 bg-black z-10">
-          <div className="p-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71767b]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Search"
-                className="w-full pl-12 pr-4 py-3 glass-input rounded-full text-white placeholder-dark-500 focus:bg-white/5 focus:ring-1 focus:ring-primary transition-all duration-300"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchResults(null);
-                    setShowSearch(false);
-                  }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen">
+      {/* Header with Search */}
+      <div className="sticky top-0 z-10 backdrop-blur-md border-b border-white/10 px-4 py-3">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Search"
+            className="w-full pl-12 pr-4 py-3 glass-input rounded-full text-white placeholder-dark-500 focus:bg-white/5 focus:ring-1 focus:ring-primary transition-all duration-300"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResults(null);
+                setShowSearch(false);
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
 
-          {/* Tabs */}
-          {!showSearch && (
-            <div className="border-b border-white/5 overflow-x-auto">
-              <div className="flex min-w-max">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-4 font-medium whitespace-nowrap relative transition-colors ${activeTab === tab.id
-                        ? 'text-white'
-                        : 'text-dark-400 hover:bg-white/5'
-                      }`}
-                  >
-                    {tab.label}
-                    {activeTab === tab.id && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_10px_rgba(120,86,255,0.5)]"></div>
-                    )}
-                  </button>
-                ))}
-              </div>
+      {/* Tabs */}
+      {!showSearch && (
+        <div className="flex overflow-x-auto border-b border-white/10 scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-4 font-medium whitespace-nowrap relative transition-colors ${
+                activeTab === tab.id ? 'text-white' : 'text-dark-400 hover:bg-white/5'
+              }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search Results */}
+      {showSearch && (
+        <div className="p-4">
+          {isSearching ? (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Users */}
+              {searchResults?.internal?.users?.length > 0 && (
+                <div>
+                  <h3 className="text-white font-bold mb-3">Users</h3>
+                  {searchResults.internal.users.map((user: any) => (
+                    <Link
+                      key={user.username || user.id}
+                      href={`/profile/${(user.username || '').toLowerCase()}`}
+                      className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
+                        {user.username?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-white font-bold">{user.username}</p>
+                        <p className="text-dark-400 text-sm">@{user.username}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* No Results */}
+              {(!searchResults || (!searchResults?.internal?.users?.length && !searchResults?.posts?.length)) && (
+                <div className="text-center py-8">
+                  <p className="text-dark-400">No results for &quot;{searchQuery}&quot;</p>
+                  <p className="text-dark-500 text-sm mt-1">Try searching for something else</p>
+                </div>
+              )}
             </div>
           )}
         </div>
+      )}
 
-        {/* Search Results */}
-        {showSearch && (
+      {/* Main Content */}
+      {!showSearch && (
+        <div className="divide-y divide-white/5">
+          {/* Trending Section */}
           <div className="p-4">
-            {isSearching ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#1d9bf0]"></div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Users */}
-                {searchResults?.internal?.users?.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-3 px-2">Users</h3>
-                    {searchResults.internal.users.map((user: any) => (
-                      <Link
-                        key={user.user_id}
-                        href={`/profile/${user.username}`}
-                        className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all duration-300 border border-transparent hover:border-white/10"
-                      >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(120,86,255,0.3)]">
-                          {user.username?.[0]?.toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white text-lg">{user.username}</p>
-                          <p className="text-sm text-dark-400">@{user.username}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-
-                {/* No Results */}
-                {(!searchResults ||
-                  (!searchResults?.internal?.users?.length &&
-                    !searchResults?.posts?.length)) && (
-                    <div className="text-center py-8">
-                      <p className="text-[#71767b]">No results for "{searchQuery}"</p>
-                      <p className="text-sm text-[#71767b] mt-2">Try searching for something else</p>
-                    </div>
-                  )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Main Content */}
-        {!showSearch && (
-          <div>
-            {/* Trending Section */}
-            <div>
-              <h2 className="px-5 py-4 font-bold text-white text-xl">Trends for you</h2>
-              {trendingTopics[activeTab as keyof typeof trendingTopics]?.map((topic, index) => (
-                <button
-                  key={`${activeTab}-${index}`}
-                  onClick={() => handleTagClick(topic.tag)}
-                  className="w-full px-5 py-4 hover:bg-white/5 transition-all duration-300 text-left border-b border-white/5 group"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs text-dark-400">{topic.category} · Trending</p>
-                      <p className="font-bold text-white mt-1 text-lg group-hover:text-primary transition-colors">#{topic.tag}</p>
-                      <p className="text-xs text-dark-500 mt-1">{topic.posts} posts</p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Show more options
-                      }}
-                      className="p-2 text-dark-400 hover:bg-white/10 hover:text-white rounded-full transition-all"
-                    >
-                      ···
-                    </button>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Who to Follow Section */}
-            <div className="mt-4">
-              <h2 className="px-5 py-4 font-bold text-white text-xl">Who to follow</h2>
-              {suggestedUsers.map((user) => (
-                <div
-                  key={user.username}
-                  className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-all duration-300 border-b border-white/5"
-                >
-                  <Link
-                    href={`/profile/${user.username}`}
-                    className="flex items-center gap-4 flex-1 group"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-[0_0_10px_rgba(120,86,255,0.2)] group-hover:scale-105 transition-transform">
-                      {user.username[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white group-hover:underline">{user.name}</span>
-                        {user.badge && (
-                          <svg className="w-4 h-4 text-primary fill-primary" viewBox="0 0 24 24">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
-                      </div>
-                      <p className="text-sm text-dark-400">@{user.username}</p>
-                    </div>
-                  </Link>
-                  <button
-                    onClick={() => handleFollow(user.username)}
-                    className="px-5 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 text-sm transition-transform active:scale-95"
-                  >
-                    Follow
-                  </button>
-                </div>
-              ))}
-              <Link
-                href="/explore/people"
-                className="block px-5 py-4 text-primary hover:bg-white/5 transition-colors"
+            <h2 className="text-white font-bold text-xl mb-4">Trends for you</h2>
+            {trendingTopics[activeTab as keyof typeof trendingTopics]?.map((topic, index) => (
+              <button
+                key={index}
+                onClick={() => handleTagClick(topic.tag)}
+                className="w-full px-5 py-4 hover:bg-white/5 transition-all duration-300 text-left border-b border-white/5 group"
               >
-                Show more
-              </Link>
-            </div>
+                <p className="text-dark-400 text-sm">{topic.category} · Trending</p>
+                <p className="text-white font-bold">#{topic.tag}</p>
+                <p className="text-dark-400 text-sm">{topic.posts} posts</p>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-    </MainLayout>
+
+          {/* Who to Follow Section */}
+          <div className="p-4">
+            <h2 className="text-white font-bold text-xl mb-4">Who to follow</h2>
+            {suggestedUsers.map((user) => (
+              <div key={user.username} className="flex items-center justify-between py-3">
+                <Link href={`/profile/${user.username}`} className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
+                    {user.username[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold flex items-center gap-1">
+                      {user.name}
+                      {user.badge && (
+                        <span className="text-[#1d9bf0]">✓</span>
+                      )}
+                    </p>
+                    <p className="text-dark-400 text-sm">@{user.username}</p>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => toast.success(`Followed @${user.username}`)}
+                  className="px-5 py-2 bg-white text-black font-bold rounded-full hover:bg-gray-200 text-sm transition-transform active:scale-95"
+                >
+                  Follow
+                </button>
+              </div>
+            ))}
+            <button className="mt-2 text-primary hover:underline text-sm">Show more</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
 export default function ExplorePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1d9bf0]"></div></div>}>
-      <ExplorePageContent />
-    </Suspense>
+    <MainLayout>
+      <Suspense fallback={<div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+        <ExplorePageContent />
+      </Suspense>
+    </MainLayout>
   );
 }
-
-import toast from 'react-hot-toast';
