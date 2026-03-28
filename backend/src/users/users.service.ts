@@ -48,16 +48,35 @@ export class UsersService {
   }
 
   async getPublicProfile(username: string) {
-    // Normalize to lowercase to handle any casing from client URLs
     const normalizedUsername = username.toLowerCase().trim();
-
-    const { data: profile, error } = await this.supabaseService
+    // 1. Try exact match first (case-sensitive) to be efficient
+    let { data: profile, error } = await this.supabaseService
       .from('profiles')
       .select('*')
-      .ilike('username', normalizedUsername)
-      .single();
+      .eq('username', username)
+      .maybeSingle();
 
-    if (error || !profile) throw new NotFoundException('User not found');
+    if (error || !profile) {
+      // 2. Try case-insensitive exact match
+      // We escape underscores and percents because ILIKE treats them as wildcards
+      const escapedUsername = normalizedUsername.replace(/[_%]/g, '\\$&');
+      const { data: profiles, error: searchError } = await this.supabaseService
+        .from('profiles')
+        .select('*')
+        .ilike('username', escapedUsername);
+
+      if (searchError) {
+        console.error(`Profile lookup error for ${username}:`, searchError);
+        throw new NotFoundException('Profile lookup failed');
+      }
+
+      if (!profiles || profiles.length === 0) {
+        throw new NotFoundException('User not found');
+      }
+
+      // If multiple match (due to duplicate data), pick the first one or exact match if possible
+      profile = profiles.find(p => p.username.toLowerCase() === normalizedUsername) || profiles[0];
+    }
 
     const { data: user } = await this.supabaseService
       .from('users')
@@ -83,12 +102,16 @@ export class UsersService {
       paidChatSettings = pc;
     }
 
-    // Fetch Affiliate Info
-    const { data: affiliates } = await this.supabaseService
+    // Fetch Affiliate Info (FIXED column names user_id and is_active)
+    const { data: affiliates, error: affError } = await this.supabaseService
       .from('affiliates')
       .select('*')
-      .eq('affiliate_id', profile.user_id)
-      .eq('status', 'active');
+      .eq('user_id', profile.user_id)
+      .eq('is_active', true);
+
+    if (affError) {
+      console.error(`Affiliates fetch error for ${profile.user_id}:`, affError);
+    }
 
     return {
       ...profile,
@@ -107,12 +130,13 @@ export class UsersService {
     const updateData: any = {};
 
     if (updateProfileDto.username) {
+      const escapedNewUsername = updateProfileDto.username.toLowerCase().trim().replace(/[_%]/g, '\\$&');
       const { data: existing } = await this.supabaseService
         .from('profiles')
         .select('user_id')
-        .eq('username', updateProfileDto.username)
+        .ilike('username', escapedNewUsername)
         .neq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (existing) throw new BadRequestException('Username already taken');
       updateData.username = updateProfileDto.username;
@@ -207,11 +231,14 @@ export class UsersService {
   }
 
   async getFollowers(username: string) {
-    const { data: profile } = await this.supabaseService
+    const normalized = username.toLowerCase().trim();
+    const escaped = normalized.replace(/[_%]/g, '\\$&');
+    const { data: profiles } = await this.supabaseService
       .from('profiles')
-      .select('user_id')
-      .eq('username', username)
-      .single();
+      .select('user_id, username')
+      .ilike('username', escaped);
+
+    const profile = profiles?.find(p => p.username.toLowerCase() === normalized) || profiles?.[0];
 
     if (!profile) throw new NotFoundException('User not found');
 
@@ -225,11 +252,14 @@ export class UsersService {
   }
 
   async getFollowing(username: string) {
-    const { data: profile } = await this.supabaseService
+    const normalized = username.toLowerCase().trim();
+    const escaped = normalized.replace(/[_%]/g, '\\$&');
+    const { data: profiles } = await this.supabaseService
       .from('profiles')
-      .select('user_id')
-      .eq('username', username)
-      .single();
+      .select('user_id, username')
+      .ilike('username', escaped);
+
+    const profile = profiles?.find(p => p.username.toLowerCase() === normalized) || profiles?.[0];
 
     if (!profile) throw new NotFoundException('User not found');
 

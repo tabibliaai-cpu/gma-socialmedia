@@ -10,7 +10,7 @@ export class AuthService {
   constructor(
     private supabaseService: SupabaseService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, password, role = 'user', username } = registerDto;
@@ -26,11 +26,12 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    // Check if username exists
+    // Check if username exists (case-insensitive and wildcard-safe)
+    const escapedUsername = username.toLowerCase().trim().replace(/[_%]/g, '\\$&');
     const { data: existingProfile } = await this.supabaseService
       .from('profiles')
       .select('user_id')
-      .eq('username', username)
+      .ilike('username', escapedUsername)
       .maybeSingle();
 
     if (existingProfile) {

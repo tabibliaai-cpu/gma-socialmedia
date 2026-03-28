@@ -3,15 +3,15 @@ import { SupabaseService } from '../common/supabase/supabase.service';
 
 @Injectable()
 export class AffiliatesService {
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(private supabaseService: SupabaseService) { }
 
   async createAffiliate(businessId: string, targetUsername: string) {
     // 1. Find the target user by username
     const { data: targetUser } = await this.supabaseService
       .from('profiles')
       .select('user_id')
-      .eq('username', targetUsername)
-      .single();
+      .ilike('username', targetUsername)
+      .maybeSingle();
 
     if (!targetUser) {
       throw new NotFoundException(`User @${targetUsername} not found`);
@@ -39,7 +39,7 @@ export class AffiliatesService {
       .single();
 
     if (alreadyAffiliate) {
-       throw new BadRequestException('User is already an active affiliate');
+      throw new BadRequestException('User is already an active affiliate');
     }
 
     // 5. Check the 10 Free Slots Limit Rule
