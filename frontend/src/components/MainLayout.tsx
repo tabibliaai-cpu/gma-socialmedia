@@ -182,7 +182,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* User Profile */}
         <div className="mt-auto mb-4">
           <button
-            onClick={() => router.push(`/profile/${user?.profile?.username || user?.username || user?.user_id || user?.id}`)}
+            onClick={() => {
+              const username = user?.profile?.username || user?.username;
+              if (username) {
+                router.push(`/profile/${username}`);
+              } else {
+                router.push('/settings/profile');
+              }
+            }}
             className="flex items-center gap-3 p-3 rounded-full hover:bg-white/5 cursor-pointer transition-colors w-full"
           >
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shrink-0 shadow-[0_0_15px_rgba(29,155,240,0.3)]">

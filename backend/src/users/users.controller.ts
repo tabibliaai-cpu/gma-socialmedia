@@ -64,12 +64,7 @@ export class UsersController {
     return this.usersService.getSharedProfile(token);
   }
 
-  // NOTE: Wildcard routes must come LAST to avoid swallowing specific routes above
-  @Get(':username')
-  async getUserProfile(@Param('username') username: string) {
-    return this.usersService.getPublicProfile(username);
-  }
-
+  // Parameterized routes must come LAST to avoid intercepting specific routes
   @Get(':username/followers')
   async getFollowers(@Param('username') username: string) {
     return this.usersService.getFollowers(username);
@@ -78,5 +73,10 @@ export class UsersController {
   @Get(':username/following')
   async getFollowing(@Param('username') username: string) {
     return this.usersService.getFollowing(username);
+  }
+
+  @Get(':username')
+  async getUserProfile(@Param('username') username: string) {
+    return this.usersService.getPublicProfile(username);
   }
 }

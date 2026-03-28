@@ -34,6 +34,16 @@ export default function ProfilePage() {
     if (targetUsername) loadProfile();
   }, [targetUsername, user?.id]);
 
+  // If viewing own profile but it doesn't exist, redirect to settings
+  useEffect(() => {
+    if (!loading && error && currentUser) {
+      const isOwn = currentUser?.profile?.username === username || currentUser?.username === username;
+      if (isOwn) {
+        router.push('/settings/profile');
+      }
+    }
+  }, [loading, error, currentUser, username, router]);
+
   const loadProfile = async () => {
     setLoading(true);
     setError(null);
