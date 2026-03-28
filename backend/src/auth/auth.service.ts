@@ -30,7 +30,7 @@ export class AuthService {
     const { data: existingProfile } = await this.supabaseService
       .from('profiles')
       .select('user_id')
-      .eq('username', username)
+      .ilike('username', username)
       .maybeSingle();
 
     if (existingProfile) {
@@ -65,6 +65,7 @@ export class AuthService {
       badge_type: 'none',
       avatar_url: '',
     });
+
     if (profileError) {
       console.error('Failed to create profile for user:', user.id, profileError);
     }
@@ -73,6 +74,7 @@ export class AuthService {
     const { error: privacyError } = await this.supabaseService.from('privacy_settings').insert({
       user_id: user.id,
     });
+
     if (privacyError) {
       console.error('Failed to create privacy settings for user:', user.id, privacyError);
     }
@@ -108,10 +110,16 @@ export class AuthService {
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-
     if (!isValidPassword) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    // Fetch the user's profile to get their username
+    const { data: profile } = await this.supabaseService
+      .from('profiles')
+      .select('username')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     // Generate tokens
     const tokens = this.generateTokens(user.id, user.email, user.role);
@@ -122,6 +130,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        username: profile?.username || user.username || null,
       },
       ...tokens,
     };
