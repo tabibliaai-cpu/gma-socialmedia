@@ -25,19 +25,19 @@ export class UsersService {
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
       .select('name_visibility, dm_permission')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     const { data: paidChat } = await this.supabaseService
       .from('paid_chat_settings')
       .select('price_per_message, is_enabled')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     return {
       ...user,
@@ -51,26 +51,42 @@ export class UsersService {
     // Normalize to lowercase to handle any casing from client URLs
     const normalizedUsername = username.toLowerCase().trim();
 
+    // First try to look up by username in profiles table
     const { data: profile, error } = await this.supabaseService
       .from('profiles')
       .select('*')
       .ilike('username', normalizedUsername)
-      .single();
+      .maybeSingle();
 
-    if (error || !profile) throw new NotFoundException('User not found');
+    if (error || !profile) {
+      // As a fallback, try to look up by user_id (UUID) in case a UUID was passed
+      const { data: profileById } = await this.supabaseService
+        .from('profiles')
+        .select('*')
+        .eq('user_id', normalizedUsername)
+        .maybeSingle();
 
+      if (!profileById) throw new NotFoundException('User not found');
+
+      return this.buildPublicProfileResponse(profileById);
+    }
+
+    return this.buildPublicProfileResponse(profile);
+  }
+
+  private async buildPublicProfileResponse(profile: any) {
     const { data: user } = await this.supabaseService
       .from('users')
       .select('role, created_at')
       .eq('id', profile.user_id)
-      .single();
+      .maybeSingle();
 
     // Fetch Privacy Settings
     const { data: privacy } = await this.supabaseService
       .from('privacy_settings')
       .select('name_visibility, dm_permission')
       .eq('user_id', profile.user_id)
-      .single();
+      .maybeSingle();
 
     // Fetch Monetization (Paid Chat)
     let paidChatSettings: any = null;
@@ -79,7 +95,7 @@ export class UsersService {
         .from('paid_chat_settings')
         .select('price_per_message, is_enabled')
         .eq('user_id', profile.user_id)
-        .single();
+        .maybeSingle();
       paidChatSettings = pc;
     }
 
@@ -92,12 +108,10 @@ export class UsersService {
 
     return {
       ...profile,
-      name: profile.username, // Fallback since real 'name' column is missing from DB
+      name: profile.display_name || profile.name || profile.username,
       role: user?.role,
       created_at: user?.created_at,
-      // 3. DM PERMISSION RULE
       dm_permission: privacy?.dm_permission || 'everyone',
-      // Profile Extras
       paid_chat_settings: paidChatSettings,
       affiliates: affiliates || [],
     };
@@ -112,7 +126,7 @@ export class UsersService {
         .select('user_id')
         .eq('username', updateProfileDto.username)
         .neq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (existing) throw new BadRequestException('Username already taken');
       updateData.username = updateProfileDto.username;
@@ -140,7 +154,7 @@ export class UsersService {
   async updatePrivacy(userId: string, updatePrivacyDto: UpdatePrivacyDto) {
     const { data, error } = await this.supabaseService
       .from('privacy_settings')
-      .upsert({ user_id: userId, ...updatePrivacyDto }) // Use upsert in case row doesn't exist yet
+      .upsert({ user_id: userId, ...updatePrivacyDto })
       .select()
       .single();
 
@@ -167,7 +181,7 @@ export class UsersService {
       .select('id')
       .eq('follower_id', followerId)
       .eq('following_id', followingId)
-      .single();
+      .maybeSingle();
 
     if (existing) throw new BadRequestException('Already following this user');
 
@@ -185,7 +199,7 @@ export class UsersService {
       .from('profiles')
       .select('username')
       .eq('user_id', followerId)
-      .single();
+      .maybeSingle();
 
     await this.notificationsService.notifyFollow(followingId, followerProfile?.username || 'Someone');
     return { message: 'Followed successfully' };
@@ -202,7 +216,6 @@ export class UsersService {
 
     await this.supabaseService.rpc('decrement_followers', { user_id: followingId });
     await this.supabaseService.rpc('decrement_following', { user_id: followerId });
-
     return { message: 'Unfollowed successfully' };
   }
 
@@ -210,8 +223,8 @@ export class UsersService {
     const { data: profile } = await this.supabaseService
       .from('profiles')
       .select('user_id')
-      .eq('username', username)
-      .single();
+      .ilike('username', username.toLowerCase().trim())
+      .maybeSingle();
 
     if (!profile) throw new NotFoundException('User not found');
 
@@ -228,8 +241,8 @@ export class UsersService {
     const { data: profile } = await this.supabaseService
       .from('profiles')
       .select('user_id')
-      .eq('username', username)
-      .single();
+      .ilike('username', username.toLowerCase().trim())
+      .maybeSingle();
 
     if (!profile) throw new NotFoundException('User not found');
 
@@ -248,13 +261,14 @@ export class UsersService {
       .select('id')
       .eq('follower_id', followerId)
       .eq('following_id', followingId)
-      .single();
+      .maybeSingle();
+
     return { isFollowing: !!data };
   }
 
   async createShareLink(userId: string) {
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Master Plan: 5 minutes expiry
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const { data, error } = await this.supabaseService
       .from('share_links')
@@ -271,13 +285,12 @@ export class UsersService {
       .from('share_links')
       .select('*')
       .eq('token', token)
-      .single();
+      .maybeSingle();
 
     if (linkError || !link) throw new NotFoundException('Invalid share link');
     if (new Date(link.expires_at) < new Date()) throw new BadRequestException('Share link expired');
     if (link.used) throw new BadRequestException('Share link already used');
 
-    // Master Plan: Works only once
     await this.supabaseService
       .from('share_links')
       .update({ used: true })
